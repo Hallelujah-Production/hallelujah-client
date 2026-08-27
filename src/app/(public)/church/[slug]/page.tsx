@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Clock, Mail, MapPin, Phone } from "lucide-react";
-import { getAllChurchSlugs, getChurchBySlug, getChurchPrayerTypes } from "@/lib/services";
+import { getChurchBySlug, getChurchPrayerTypes } from "@/lib/services";
 import { PLATFORM_NAME, PLATFORM_SITE_URL } from "@/lib/brand";
 import { ChurchMark } from "@/components/layout/church-mark";
 import { PrayerIcon } from "@/components/domain/prayer-icon";
@@ -10,11 +10,6 @@ import { formatCurrency } from "@/lib/utils";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  const slugs = await getAllChurchSlugs();
-  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
