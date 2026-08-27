@@ -10,22 +10,12 @@ import {
   REFRESH_COOKIE,
 } from "./cookies";
 import { ApiError } from "./errors";
-
-const API_PREFIX = "/api/v1";
+import { withApiPrefix } from "./origin";
 
 const MUTATING = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
-function apiOrigin(): string {
-  return (
-    process.env.API_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:3001"
-  ).replace(/\/$/, "");
-}
-
 export function apiUrl(path: string): string {
-  const suffix = path.startsWith("/") ? path : `/${path}`;
-  return `${apiOrigin()}${API_PREFIX}${suffix}`;
+  return withApiPrefix(path);
 }
 
 export interface ApiSuccess<T> {

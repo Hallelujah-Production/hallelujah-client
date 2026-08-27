@@ -8,14 +8,7 @@ import {
   readSetCookies,
   REFRESH_COOKIE,
 } from "@/lib/api/cookies";
-
-function apiOrigin(): string {
-  return (
-    process.env.API_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:3001"
-  ).replace(/\/$/, "");
-}
+import { withApiPrefix } from "@/lib/api/origin";
 
 /**
  * When the access cookie has expired, rotate the session before the page
@@ -34,7 +27,7 @@ export async function middleware(request: NextRequest) {
   if (csrf) headers[CSRF_HEADER] = csrf;
 
   try {
-    const upstream = await fetch(`${apiOrigin()}/api/v1/auth/refresh`, {
+    const upstream = await fetch(withApiPrefix("/auth/refresh"), {
       method: "POST",
       headers,
       cache: "no-store",
