@@ -27,7 +27,7 @@ export async function getUserById(id: string): Promise<User | null> {
 
 export async function getChurchTeam(
   churchId: string,
-  params: { search?: string; role?: Role | "ALL"; page?: number; limit?: number } = {},
+  params: { search?: string; role?: Role | "ALL"; page?: number; limit?: number; countsOnly?: boolean } = {},
 ): Promise<Paginated<UserView>> {
   const session = await getSession();
   if (session?.currentRole === "SUPER_ADMIN") {
@@ -37,6 +37,7 @@ export async function getChurchTeam(
       churchId,
       page: params.page,
       limit: params.limit,
+      countsOnly: params.countsOnly,
     });
   }
   const result = await apiGetPaginated<Record<string, unknown>>("/team", {
@@ -45,6 +46,7 @@ export async function getChurchTeam(
       role: params.role,
       page: params.page ?? 1,
       limit: params.limit ?? 20,
+      countsOnly: params.countsOnly ? true : undefined,
     },
   });
   return { ...result, data: result.data.map(mapUserView) };
@@ -87,6 +89,7 @@ export async function getUsers(
     status?: "ALL" | "ACTIVE" | "INACTIVE";
     page?: number;
     limit?: number;
+    countsOnly?: boolean;
   } = {},
 ): Promise<Paginated<UserView>> {
   const result = await apiGetPaginated<Record<string, unknown>>("/admin/users", {
@@ -97,6 +100,7 @@ export async function getUsers(
       status: params.status,
       page: params.page ?? 1,
       limit: params.limit ?? 20,
+      countsOnly: params.countsOnly ? true : undefined,
     },
   });
   return { ...result, data: result.data.map(mapUserView) };

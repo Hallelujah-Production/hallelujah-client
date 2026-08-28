@@ -14,9 +14,10 @@ import {
   PaymentStatusBadge,
 } from "@/components/ui/badge";
 import { requireChurchAdmin } from "@/lib/guards";
-import { getPayments, getReport } from "@/lib/services";
+import { getPayments, getReportSummary } from "@/lib/services";
 import type { PaymentMethod, PaymentStatus, PaymentView } from "@/lib/types";
 import { first, formatCurrency, formatDate, readNumberParam } from "@/lib/utils";
+import { paiseToRupees } from "@/lib/api/money";
 
 export const metadata: Metadata = {
   title: "Payments",
@@ -44,14 +45,14 @@ export default async function PaymentsPage({
     maxAmount: Number(first(params.max)) || undefined,
   };
 
-  const [result, pending, verified, month] = await Promise.all([
+  const [result, verified, month] = await Promise.all([
     getPayments(churchId, query),
-    getPayments(churchId, { status: "PENDING_VERIFICATION", limit: 1 }),
-    getPayments(churchId, { status: "VERIFIED", limit: 1 }),
-    getReport({ from: "", to: "", preset: "monthly" }),
+    getPayments(churchId, { status: "VERIFIED", limit: 1, countsOnly: true }),
+    getReportSummary({ from: "", to: "", preset: "monthly" }),
   ]);
 
-  const verifiedTotal = month.summary.revenue;
+  const verifiedTotal = paiseToRupees(month.payments.collected.totalPaise);
+  const pendingTotal = month.pendingVerification;
 
   const columns: Column<PaymentView>[] = [
     {
@@ -138,9 +139,9 @@ export default async function PaymentsPage({
       <StatGrid columns={3}>
         <StatCard
           label="Awaiting verification"
-          value={pending.total}
+          value={pendingTotal}
           hint="Paid, receipt after office confirmation"
-          tone={pending.total > 0 ? "warning" : "default"}
+          tone={pendingTotal > 0 ? "warning" : "default"}
           href="/payments?status=PENDING_VERIFICATION"
           emphasis
         />

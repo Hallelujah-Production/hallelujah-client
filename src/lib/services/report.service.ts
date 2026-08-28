@@ -103,6 +103,12 @@ function prefix(platform: boolean | undefined, churchId?: string) {
   return "/reports";
 }
 
+/** Summary only — skips prayer-types / staff / daily series used by the full reports page. */
+export async function getReportSummary(filters: ReportFilters): Promise<SummaryDto> {
+  const base = prefix(filters.platform, filters.churchId);
+  return apiGet<SummaryDto>(`${base}/summary`, { query: periodQuery(filters) });
+}
+
 export async function getReport(filters: ReportFilters): Promise<ReportResult> {
   const base = prefix(filters.platform, filters.churchId);
   const query = periodQuery(filters);

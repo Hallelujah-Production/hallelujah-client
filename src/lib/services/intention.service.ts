@@ -49,6 +49,7 @@ export async function getIntentions(
       paymentStatus: query.paymentStatus,
       from: query.from,
       to: query.to,
+      countsOnly: query.countsOnly ? true : undefined,
     },
   });
   return { ...result, data: result.data.map((row) => mapIntention(row, church)) };

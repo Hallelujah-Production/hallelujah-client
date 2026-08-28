@@ -36,6 +36,7 @@ export async function getPayments(
       to: query.to,
       minAmountPaise: rupeesToPaise(query.minAmount),
       maxAmountPaise: rupeesToPaise(query.maxAmount),
+      countsOnly: query.countsOnly ? true : undefined,
     },
   });
   return { ...result, data: result.data.map((row) => mapPaymentView(row, church)) };
@@ -97,7 +98,7 @@ export async function confirmRecordedOfferings(churchId: string): Promise<void> 
 
 export async function getPendingVerificationCount(_churchId: string): Promise<number> {
   const result = await apiGetPaginated<Record<string, unknown>>("/payments", {
-    query: { status: "PENDING_VERIFICATION", page: 1, limit: 1 },
+    query: { status: "PENDING_VERIFICATION", page: 1, limit: 1, countsOnly: true },
   });
   return result.total;
 }

@@ -252,6 +252,8 @@ export interface ListQuery {
   from?: string;
   to?: string;
   sort?: string;
+  /** Skip row hydration; only `meta.total` is used. */
+  countsOnly?: boolean;
 }
 
 export interface IntentionQuery extends ListQuery {

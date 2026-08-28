@@ -59,14 +59,16 @@ interface ChurchBreakdown {
 }
 
 export async function getDashboardStats(_churchId: string): Promise<ChurchDashboardStats> {
-  const [today, month, daily, types] = await Promise.all([
-    apiGet<ReportSummary>("/reports/summary", { query: { period: "today" } }),
-    apiGet<ReportSummary>("/reports/summary", { query: { period: "this_month" } }),
-    apiGetPaginated<DailyRow>("/reports/daily", { query: { period: "this_month", limit: 100 } }),
-    apiGetPaginated<PrayerTypeRow>("/reports/prayer-types", {
-      query: { period: "this_month", limit: 100 },
-    }),
-  ]);
+  const bundle = await apiGet<{
+    today: ReportSummary;
+    month: ReportSummary;
+    daily: { data: DailyRow[] };
+    prayerTypes: { data: PrayerTypeRow[] };
+  }>("/reports/dashboard");
+  const today = bundle.today;
+  const month = bundle.month;
+  const daily = { data: bundle.daily?.data ?? [] };
+  const types = { data: bundle.prayerTypes?.data ?? [] };
 
   const series = daily.data.slice(-14);
   const revenueTrend: TrendPoint[] = series.map((row) => ({
@@ -163,35 +165,34 @@ export async function getPlatformHeadcounts(): Promise<{
 }
 
 export async function getPlatformStats(): Promise<PlatformDashboardStats> {
-  const [churches, users, today, month, daily, churchRows, admins, staff, active] =
-    await Promise.all([
-      apiGetPaginated<Record<string, unknown>>("/admin/churches", {
-        query: { limit: 1, countsOnly: true },
-      }),
-      apiGetPaginated<Record<string, unknown>>("/admin/users", {
-        query: { limit: 1, countsOnly: true },
-      }),
-      apiGet<ReportSummary>("/admin/reports/summary", { query: { period: "today" } }),
-      apiGet<ReportSummary>("/admin/reports/summary", { query: { period: "this_month" } }),
-      apiGetPaginated<DailyRow>("/admin/reports/daily", {
-        query: { period: "this_month", limit: 100 },
-      }),
-      apiGetPaginated<ChurchBreakdown>("/admin/reports/churches", {
-        query: { period: "this_month", limit: 100 },
-      }),
-      apiGetPaginated<Record<string, unknown>>("/admin/users", {
-        query: { role: "CHURCH_ADMIN", limit: 1, countsOnly: true },
-      }),
-      apiGetPaginated<Record<string, unknown>>("/admin/users", {
-        query: { role: "CHURCH_STAFF", limit: 1, countsOnly: true },
-      }),
-      apiGetPaginated<Record<string, unknown>>("/admin/churches", {
-        query: { status: "ACTIVE", limit: 1, countsOnly: true },
-      }),
-    ]);
+  const dashboard = await apiGet<{
+    today: ReportSummary;
+    month: ReportSummary;
+    daily: { data: DailyRow[] };
+    churches: { data: ChurchBreakdown[] };
+    headcounts: {
+      churches: number;
+      activeChurches: number;
+      users: number;
+      admins: number;
+      staff: number;
+    };
+  }>("/admin/reports/dashboard");
 
-  if (churches.total === 0) {
-    return emptyPlatformStats({ totalUsers: users.total });
+  const today = dashboard.today;
+  const month = dashboard.month;
+  const daily = { data: dashboard.daily?.data ?? [] };
+  const churchRows = { data: dashboard.churches?.data ?? [] };
+  const counts = dashboard.headcounts ?? {
+    churches: 0,
+    activeChurches: 0,
+    users: 0,
+    admins: 0,
+    staff: 0,
+  };
+
+  if (counts.churches === 0) {
+    return emptyPlatformStats({ totalUsers: counts.users });
   }
 
   const series = daily.data.slice(-14);
@@ -213,11 +214,11 @@ export async function getPlatformStats(): Promise<PlatformDashboardStats> {
     .sort((a, b) => b.value - a.value);
 
   return {
-    totalChurches: churches.total,
-    activeChurches: active.total,
-    totalUsers: users.total,
-    totalAdmins: admins.total,
-    totalStaff: staff.total,
+    totalChurches: counts.churches,
+    activeChurches: counts.activeChurches,
+    totalUsers: counts.users,
+    totalAdmins: counts.admins,
+    totalStaff: counts.staff,
     totalIntentions: month.intentions.total,
     pending: month.intentions.total - month.intentions.completed - month.intentions.cancelled,
     completed: month.intentions.completed,
@@ -262,16 +263,16 @@ export async function getStaffStats(
   _churchId: string,
   _staffUserId: string,
 ): Promise<StaffDashboardStats> {
-  const [today, upcoming, completed, all] = await Promise.all([
-    apiGetPaginated<unknown>("/my-prayers", { query: { scope: "today", limit: 1 } }),
-    apiGetPaginated<unknown>("/my-prayers", { query: { scope: "upcoming", limit: 1 } }),
-    apiGetPaginated<unknown>("/my-prayers", { query: { scope: "completed", limit: 1 } }),
-    apiGetPaginated<unknown>("/my-prayers", { query: { scope: "all", limit: 1 } }),
-  ]);
+  const bundle = await apiGet<{
+    today: number;
+    upcoming: number;
+    completed: number;
+    all: number;
+  }>("/my-prayers/stats");
   return {
-    today: today.total,
-    pending: Math.max(0, all.total - completed.total),
-    completed: completed.total,
-    upcoming: upcoming.total,
+    today: bundle.today,
+    pending: Math.max(0, bundle.all - bundle.completed),
+    completed: bundle.completed,
+    upcoming: bundle.upcoming,
   };
 }

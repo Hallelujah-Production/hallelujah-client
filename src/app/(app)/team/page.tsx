@@ -32,8 +32,8 @@ export default async function TeamPage({
       page,
       limit: 20,
     }),
-    getChurchTeam(session.currentChurch.id, { role: "CHURCH_ADMIN", limit: 1 }),
-    getChurchTeam(session.currentChurch.id, { role: "CHURCH_STAFF", limit: 1 }),
+    getChurchTeam(session.currentChurch.id, { role: "CHURCH_ADMIN", limit: 1, countsOnly: true }),
+    getChurchTeam(session.currentChurch.id, { role: "CHURCH_STAFF", limit: 1, countsOnly: true }),
   ]);
 
   return (

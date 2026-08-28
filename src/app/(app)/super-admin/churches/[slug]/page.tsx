@@ -168,7 +168,7 @@ async function Overview({
   if (!view) return null;
   const [recent, pending] = await Promise.all([
     getIntentions(churchId, { limit: 5 }),
-    getPayments(churchId, { status: "PENDING_VERIFICATION", limit: 1 }),
+    getPayments(churchId, { status: "PENDING_VERIFICATION", limit: 1, countsOnly: true }),
   ]);
 
   return (
