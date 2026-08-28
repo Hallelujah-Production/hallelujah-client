@@ -70,11 +70,8 @@ export default async function ReceiptDetailPage({
         </p>
       ) : null}
 
-      <div
-        data-print="hide"
-        className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0"
-      >
-        <p className="mb-2 text-xs text-muted-foreground lg:hidden">
+      <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 print:mx-0 print:overflow-visible print:px-0 print:pb-0">
+        <p data-print="hide" className="mb-2 text-xs text-muted-foreground lg:hidden">
           Scroll sideways to see the full A4 receipt.
         </p>
         <Receipt receipt={receipt} />

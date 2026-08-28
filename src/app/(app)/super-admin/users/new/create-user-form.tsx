@@ -7,6 +7,7 @@ import { ShieldAlert } from "lucide-react";
 import { createTeamMemberAction, type TeamActionState } from "@/app/actions/team";
 import { Button } from "@/components/ui/button";
 import { Field, FormErrorSummary, FormRow, Input, Select } from "@/components/ui/form";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 import type { Church, Role } from "@/lib/types";
 
@@ -16,7 +17,7 @@ export function CreateUserForm({ churches }: { churches: Church[] }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(createTeamMemberAction, initialState);
   const [role, setRole] = React.useState<Role>("CHURCH_ADMIN");
-  useActionFeedback(state, { successTitle: "Invitation sent", silentError: true });
+  useActionFeedback(state, { successTitle: "User account created successfully.", silentError: true });
 
   React.useEffect(() => {
     if (state.status === "success") {
@@ -73,7 +74,7 @@ export function CreateUserForm({ churches }: { churches: Church[] }) {
           id="user-church"
           label="Church"
           required
-          description="The parish this account is allotted to. They sign in with this email and password. Super Admin can later allot the same person to another church — still one login."
+          description="The parish this account is allotted to. They sign in with this email and the password you set. Super Admin can later allot the same person to another church — still one login."
         >
           {(aria) => (
             <Select {...aria} name="churchId" defaultValue={churches[0]?.id}>
@@ -93,13 +94,35 @@ export function CreateUserForm({ churches }: { churches: Church[] }) {
         </p>
       )}
 
+      <FormRow>
+        <Field
+          id="user-password"
+          label="Password"
+          required
+          description="At least 10 characters. They must choose a new password on first sign-in."
+        >
+          {(aria) => (
+            <PasswordInput {...aria} name="password" autoComplete="new-password" minLength={10} />
+          )}
+        </Field>
+        <Field id="user-confirm-password" label="Confirm password" required>
+          {(aria) => (
+            <PasswordInput
+              {...aria}
+              name="confirmPassword"
+              autoComplete="new-password"
+              minLength={10}
+            />
+          )}
+        </Field>
+      </FormRow>
+
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-6">
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Creating account…" : "Create account"}
         </Button>
         <p className="text-xs text-muted-foreground">
-          There is no password field. They receive an email, open the link, and set their own
-          password, then sign in with that email.
+          The account is ready immediately. No invitation email is sent.
         </p>
       </div>
     </form>

@@ -7,6 +7,7 @@ import { ShieldCheck } from "lucide-react";
 import { createChurchAction, type ChurchFormState } from "@/app/actions/churches";
 import { Button } from "@/components/ui/button";
 import { Field, FormErrorSummary, FormRow, FormSection, Input, Select, Textarea } from "@/components/ui/form";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { slugify } from "@/lib/utils";
 
@@ -20,8 +21,8 @@ export function CreateChurchForm({
   const router = useRouter();
   const [state, formAction, pending] = useActionState(createChurchAction, initialState);
   const [name, setName] = React.useState("");
-  const [adminMode, setAdminMode] = React.useState<"existing" | "invite">(
-    existingAdmins.length ? "existing" : "invite",
+  const [adminMode, setAdminMode] = React.useState<"existing" | "new">(
+    existingAdmins.length ? "existing" : "new",
   );
   const errors = state.errors ?? {};
   useActionFeedback(state, {
@@ -111,7 +112,7 @@ export function CreateChurchForm({
 
       <FormSection
         title="Church administrator"
-        description="Assign an existing Church Admin, or invite someone new. One administrator can serve more than one parish."
+        description="Assign an existing Church Admin, or create a new administrator account with a password. One administrator can serve more than one parish."
       >
         <fieldset className="grid gap-3 sm:grid-cols-2">
           <legend className="sr-only">How to assign the administrator</legend>
@@ -135,14 +136,16 @@ export function CreateChurchForm({
             <input
               type="radio"
               name="adminMode"
-              value="invite"
+              value="new"
               className="mt-0.5"
-              checked={adminMode === "invite"}
-              onChange={() => setAdminMode("invite")}
+              checked={adminMode === "new"}
+              onChange={() => setAdminMode("new")}
             />
             <span>
-              <span className="block font-medium text-foreground">Invite a new administrator</span>
-              <span className="block text-xs text-muted-foreground">They set their own password from the email — no temporary password.</span>
+              <span className="block font-medium text-foreground">New administrator</span>
+              <span className="block text-xs text-muted-foreground">
+                Create the account now with a password. No invitation email is sent.
+              </span>
             </span>
           </label>
         </fieldset>
@@ -176,6 +179,39 @@ export function CreateChurchForm({
             <Field id="admin-phone" label="Administrator phone" error={errors.adminPhone}>
               {(aria) => <Input {...aria} name="adminPhone" type="tel" placeholder="+91 98765 43210" />}
             </Field>
+            <FormRow>
+              <Field
+                id="admin-password"
+                label="Administrator password"
+                required
+                error={errors.adminPassword}
+                description="At least 10 characters. They must choose a new password on first sign-in."
+              >
+                {(aria) => (
+                  <PasswordInput
+                    {...aria}
+                    name="adminPassword"
+                    autoComplete="new-password"
+                    minLength={10}
+                  />
+                )}
+              </Field>
+              <Field
+                id="admin-confirm-password"
+                label="Confirm password"
+                required
+                error={errors.adminConfirmPassword}
+              >
+                {(aria) => (
+                  <PasswordInput
+                    {...aria}
+                    name="adminConfirmPassword"
+                    autoComplete="new-password"
+                    minLength={10}
+                  />
+                )}
+              </Field>
+            </FormRow>
           </>
         )}
 

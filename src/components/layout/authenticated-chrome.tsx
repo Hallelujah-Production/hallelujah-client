@@ -43,7 +43,7 @@ export function AuthenticatedChrome({
   }, []);
 
   return (
-    <div className="min-h-dvh min-h-screen bg-background print:h-[297mm] print:min-h-0 print:w-[210mm] print:overflow-hidden">
+    <div className="min-h-dvh min-h-screen bg-background print:h-auto print:min-h-0 print:w-auto print:overflow-visible">
       <Sidebar sections={sections} identity={identity} badges={badges} />
 
       <div className="lg:pl-64 print:!pl-0">

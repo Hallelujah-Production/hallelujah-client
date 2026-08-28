@@ -5,7 +5,7 @@ import { ForgotPasswordForm } from "./forgot-password-form";
 
 export const metadata: Metadata = {
   title: "Forgot password",
-  description: "Request a password reset link for your church workspace.",
+  description: "Reset your password with your email and recovery code.",
   robots: { index: false, follow: false },
 };
 
@@ -20,12 +20,11 @@ export default function ForgotPasswordPage() {
       <main id="main-content" className="flex flex-1 items-center justify-center py-10">
         <div className="w-full max-w-sm">
           <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
-            Reset your password
+            Reset Password
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Enter the email address for your church account. If it is registered, we will
-            send a reset link. The message is the same either way, so accounts stay
-            private.
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            Enter the email for your account and the recovery code you saved. This page does
+            not confirm whether an email address has an account.
           </p>
           <div className="mt-8">
             <ForgotPasswordForm />
@@ -33,7 +32,7 @@ export default function ForgotPasswordPage() {
           <p className="mt-8 text-center text-sm text-muted-foreground">
             Remembered it?{" "}
             <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-              Sign in
+              Login
             </Link>
           </p>
         </div>

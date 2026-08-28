@@ -22,7 +22,7 @@ export default async function NewChurchPage() {
           { label: "New" },
         ]}
         title="Create a church"
-        description="Onboard a parish and assign an existing administrator, or invite a new one."
+        description="Onboard a parish and assign an existing administrator, or create a new one with a password."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_18rem] xl:items-start">
@@ -47,7 +47,7 @@ export default async function NewChurchPage() {
               </li>
               <li className="flex gap-2.5">
                 <span className="font-semibold text-accent">03</span>Assigns an existing Church Admin or
-                invites a new one. One administrator may serve several parishes.
+                creates a new one with a password. One administrator may serve several parishes.
               </li>
               <li className="flex gap-2.5">
                 <span className="font-semibold text-accent">04</span>Writes the whole action

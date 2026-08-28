@@ -4,15 +4,13 @@ import { revalidatePath } from "next/cache";
 import {
   createUser,
   deleteUser,
-  resendUserInvitation,
-  revokeUserInvitation,
+  resetUserPassword,
   setUserActive,
   updateUser,
 } from "@/lib/services";
 import { ApiError, userMessage } from "@/lib/api/errors";
 import { getSession } from "@/lib/session";
 import type { Role } from "@/lib/types";
-import { developmentSetPasswordNote } from "@/lib/services/helpers";
 
 export interface TeamActionState {
   status: "idle" | "error" | "success";
@@ -21,7 +19,6 @@ export interface TeamActionState {
   allottedChurchId?: string;
   allottedChurchName?: string;
   otherChurch?: boolean;
-  invitePath?: string;
 }
 
 export async function createTeamMemberAction(
@@ -43,10 +40,18 @@ export async function createTeamMemberAction(
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (!name) return { status: "error", message: "Enter the person's full name." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { status: "error", message: "Enter a valid email address for the account." };
+  }
+  if (password.length < 10) {
+    return { status: "error", message: "Use at least 10 characters." };
+  }
+  if (password !== confirmPassword) {
+    return { status: "error", message: "The two passwords do not match." };
   }
   if (session.currentRole !== "SUPER_ADMIN" && requestedRole === "SUPER_ADMIN") {
     return { status: "error", message: "Only the platform can create platform administrators." };
@@ -56,7 +61,7 @@ export async function createTeamMemberAction(
   }
 
   const result = await createUser(
-    { name, email, phone, role: requestedRole, churchId },
+    { name, email, phone, role: requestedRole, churchId, password, confirmPassword },
     { role: session.currentRole, churchId: session.currentChurch?.id ?? null },
   );
 
@@ -71,9 +76,6 @@ export async function createTeamMemberAction(
     session.currentChurch?.name ??
     "the parish";
   const otherChurch = Boolean(churchId && churchId !== session.currentChurch?.id);
-  const invitePath = result.devInviteToken
-    ? `/set-password?token=${result.devInviteToken}`
-    : undefined;
 
   return {
     status: "success",
@@ -81,7 +83,6 @@ export async function createTeamMemberAction(
     allottedChurchId: churchId ?? undefined,
     allottedChurchName,
     otherChurch,
-    invitePath,
     message: otherChurch
       ? `${name} was added as ${requestedRole === "CHURCH_ADMIN" ? "Church Admin" : "Church Staff"} at ${allottedChurchName}. They are not on this church's Team list — switch parish to see them.`
       : `${name} was added to the team at ${allottedChurchName}.`,
@@ -142,30 +143,27 @@ export async function updateTeamMemberRoleAction(
   return { status: "success", message: "Role updated." };
 }
 
-export async function resendInvitationAction(userId: string): Promise<TeamActionState> {
+export async function resetUserPasswordAction(
+  userId: string,
+  password: string,
+  confirmPassword: string,
+): Promise<TeamActionState> {
   const session = await getSession();
   if (!session) return { status: "error", message: "Your session has expired." };
   if (session.currentRole === "CHURCH_STAFF") {
-    return { status: "error", message: "You are not able to manage invitations." };
+    return { status: "error", message: "You are not able to reset passwords." };
+  }
+  if (userId === session.currentUser.id) {
+    return { status: "error", message: "Use Change Password for your own account." };
+  }
+  if (password.length < 10) {
+    return { status: "error", message: "Use at least 10 characters." };
+  }
+  if (password !== confirmPassword) {
+    return { status: "error", message: "The two passwords do not match." };
   }
   try {
-    const result = await resendUserInvitation(userId);
-    const extra = developmentSetPasswordNote(result.devInviteToken, "Development link");
-    revalidatePath("/team");
-    revalidatePath("/super-admin/users");
-    revalidatePath("/super-admin/churches", "layout");
-    return { status: "success", message: `A new invitation is on its way.${extra}` };
-  } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
-  }
-}
-
-export async function revokeInvitationAction(userId: string): Promise<TeamActionState> {
-  const session = await getSession();
-  if (!session) return { status: "error", message: "Your session has expired." };
-  try {
-    await revokeUserInvitation(userId);
+    await resetUserPassword(userId, password, confirmPassword);
   } catch (error) {
     if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
     throw error;
@@ -173,7 +171,10 @@ export async function revokeInvitationAction(userId: string): Promise<TeamAction
   revalidatePath("/team");
   revalidatePath("/super-admin/users");
   revalidatePath("/super-admin/churches", "layout");
-  return { status: "success", message: "The invitation was cancelled." };
+  return {
+    status: "success",
+    message: "The password was reset. They must sign in and choose a new password.",
+  };
 }
 
 export async function deleteTeamMemberAction(userId: string): Promise<TeamActionState> {

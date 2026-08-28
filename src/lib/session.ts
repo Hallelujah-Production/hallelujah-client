@@ -18,6 +18,7 @@ export interface Session {
   /** Parishes this Church Admin may open. Empty for Super Admin. */
   assignedChurches: Church[];
   permissions: string[];
+  mustChangePassword: boolean;
 }
 
 interface AuthMe {
@@ -25,6 +26,7 @@ interface AuthMe {
   church: Record<string, unknown> | null;
   churches?: Record<string, unknown>[];
   csrfToken?: string;
+  mustChangePassword?: boolean;
 }
 
 /**
@@ -66,8 +68,12 @@ export const getSession = cache(async (): Promise<Session | null> => {
       currentChurch: church,
       assignedChurches,
       permissions: [],
+      mustChangePassword: Boolean(me.mustChangePassword),
     };
   } catch (error) {
+    if (error instanceof ApiError && error.code === "PASSWORD_CHANGE_REQUIRED") {
+      throw error;
+    }
     if (error instanceof ApiError && (error.isUnauthorized || error.isForbidden)) {
       return null;
     }

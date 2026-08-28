@@ -18,7 +18,14 @@ export class ApiError extends Error {
   }
 
   get isForbidden() {
-    return this.status === 403 || this.code === "FORBIDDEN";
+    return (
+      (this.status === 403 || this.code === "FORBIDDEN") &&
+      this.code !== "PASSWORD_CHANGE_REQUIRED"
+    );
+  }
+
+  get isPasswordChangeRequired() {
+    return this.code === "PASSWORD_CHANGE_REQUIRED";
   }
 
   get isNotFound() {
@@ -54,6 +61,7 @@ const CODE_MESSAGES: Record<string, string> = {
   NOT_FOUND: "The requested item could not be found.",
   CONFLICT: "This record already exists or has changed. Please refresh and try again.",
   INVALID_STATE_TRANSITION: "That action isn’t possible in the current state.",
+  PASSWORD_CHANGE_REQUIRED: "You must choose a new password before continuing.",
   VALIDATION_FAILED: "Please check the highlighted fields and try again.",
   RATE_LIMITED: "Too many attempts. Please wait a moment and try again.",
   INTERNAL_ERROR: "Something went wrong. Please try again.",
@@ -67,6 +75,7 @@ const ALWAYS_MAP = new Set([
   "INVALID_CREDENTIALS",
   "FORBIDDEN",
   "NOT_FOUND",
+  "PASSWORD_CHANGE_REQUIRED",
   "RATE_LIMITED",
   "INTERNAL_ERROR",
   "NETWORK_ERROR",

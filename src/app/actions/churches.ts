@@ -5,7 +5,6 @@ import { assignChurchAdmin, createChurch, deleteChurch, setChurchActive, unassig
 import { ApiError, userMessage } from "@/lib/api/errors";
 import { getSession } from "@/lib/session";
 import { slugify } from "@/lib/utils";
-import { developmentSetPasswordNote } from "@/lib/services/helpers";
 
 export interface ChurchFormState {
   status: "idle" | "error" | "success";
@@ -34,6 +33,8 @@ export async function createChurchAction(
   const adminUserId = String(formData.get("adminUserId") ?? "").trim();
   const adminName = String(formData.get("adminName") ?? "").trim();
   const adminEmail = String(formData.get("adminEmail") ?? "").trim();
+  const adminPassword = String(formData.get("adminPassword") ?? "");
+  const adminConfirmPassword = String(formData.get("adminConfirmPassword") ?? "");
 
   if (!name) errors.name = "Enter the full name of the church.";
   if (!city) errors.city = "Enter the town or city the parish serves.";
@@ -49,6 +50,12 @@ export async function createChurchAction(
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
       errors.adminEmail = "Enter a valid email address for the administrator account.";
     }
+    if (adminPassword.length < 10) {
+      errors.adminPassword = "Use at least 10 characters.";
+    }
+    if (adminPassword !== adminConfirmPassword) {
+      errors.adminConfirmPassword = "The two passwords do not match.";
+    }
   }
 
   if (Object.keys(errors).length) {
@@ -56,7 +63,7 @@ export async function createChurchAction(
   }
 
   try {
-    const { church, invitationSent, devInviteToken } = await createChurch({
+    const { church } = await createChurch({
       name,
       city,
       state,
@@ -70,6 +77,8 @@ export async function createChurchAction(
       adminName: adminUserId ? undefined : adminName,
       adminEmail: adminUserId ? undefined : adminEmail,
       adminPhone: String(formData.get("adminPhone") ?? "").trim() || undefined,
+      adminPassword: adminUserId ? undefined : adminPassword,
+      adminConfirmPassword: adminUserId ? undefined : adminConfirmPassword,
     });
 
     revalidatePath("/super-admin/churches");
@@ -77,15 +86,14 @@ export async function createChurchAction(
     revalidatePath("/churches");
 
     const adminLabel = adminUserId ? "the selected administrator" : adminName;
-    const inviteNote = adminUserId
+    const adminNote = adminUserId
       ? ` They can open this parish from My Churches.`
-      : developmentSetPasswordNote(devInviteToken, "Development set-password link") ||
-        ` ${adminName} will receive an email to set their own password.`;
+      : ` ${adminName} can sign in with the password you set, then must choose a new one.`;
 
     return {
       status: "success",
       slug: church.slug || slugify(name),
-      message: `${church.name} has been created with ${adminLabel} as its administrator.${inviteNote}${invitationSent ? "" : ""}`,
+      message: `${church.name} has been created with ${adminLabel} as its administrator.${adminNote}`,
     };
   } catch (error) {
     if (error instanceof ApiError) {

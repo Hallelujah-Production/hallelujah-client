@@ -30,6 +30,8 @@ export default function robots(): MetadataRoute.Robots {
           "/setup",
           "/forgot-password",
           "/reset-password",
+          "/change-password",
+          "/set-password",
           "/church/*/prayer/success",
         ],
       },

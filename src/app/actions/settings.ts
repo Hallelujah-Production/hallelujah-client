@@ -28,6 +28,18 @@ export async function saveChurchProfileAction(
     return { status: "error", message: "Enter a valid parish email address." };
   }
 
+  const labels = formData.getAll("serviceTimeLabel").map((value) => String(value).trim());
+  const times = formData.getAll("serviceTimeTime").map((value) => String(value).trim());
+  const serviceTimes: { label: string; time: string }[] = [];
+  const count = Math.min(labels.length, times.length, 20);
+  for (let i = 0; i < count; i++) {
+    if (!labels[i] && !times[i]) continue;
+    if (!labels[i] || !times[i]) {
+      return { status: "error", message: "Each service time needs a label and a time." };
+    }
+    serviceTimes.push({ label: labels[i], time: times[i] });
+  }
+
   try {
     await updateChurch(session.currentChurch.id, {
       name,
@@ -41,14 +53,21 @@ export async function saveChurchProfileAction(
       city: String(formData.get("city") ?? "").trim(),
       state: String(formData.get("state") ?? "").trim(),
       postalCode: String(formData.get("postalCode") ?? "").trim(),
+      serviceTimes,
     });
   } catch (error) {
     if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
     throw error;
   }
 
+  const slug = session.currentChurch.slug;
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+  revalidatePath("/intentions/new");
+  if (slug) {
+    revalidatePath(`/church/${slug}`);
+    revalidatePath(`/church/${slug}/prayer`);
+  }
 
   return {
     status: "success",

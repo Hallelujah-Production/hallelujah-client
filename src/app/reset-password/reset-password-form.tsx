@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { resetPasswordAction, type ResetState } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/form";
+import { Field } from "@/components/ui/form";
+import { PasswordInput } from "@/components/ui/password-input";
 
 const initialState: ResetState = { status: "idle" };
 
@@ -48,10 +49,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
         description="At least 10 characters."
       >
         {(aria) => (
-          <Input
+          <PasswordInput
             {...aria}
             name="password"
-            type="password"
             autoComplete="new-password"
             autoFocus
             minLength={10}

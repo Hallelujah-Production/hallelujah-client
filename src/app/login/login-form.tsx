@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { signInAction, type LoginState } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form";
@@ -131,16 +132,23 @@ export function LoginForm({ created = false }: { created?: boolean }) {
           />
           Keep me signed in
         </label>
-        <a
+        <Link
           href="/forgot-password"
           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
-          Forgot password?
-        </a>
+          Forgot Password?
+        </Link>
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={busy}>
-        {busy ? "Signing in…" : "Sign in"}
+        {busy ? (
+          <span className="inline-flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Signing in
+          </span>
+        ) : (
+          "Login"
+        )}
       </Button>
     </form>
   );

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import type { Paginated } from "@/lib/types";
 import {
   ACCESS_COOKIE,
@@ -42,6 +43,10 @@ export interface RequestOptions {
   revalidate?: number;
 }
 
+/**
+ * One refresh at a time per Node process. Concurrent 401s wait for the same
+ * promise so they do not each rotate the same refresh token.
+ */
 let refreshInFlight: Promise<boolean> | null = null;
 
 function cookieHeader(store: Awaited<ReturnType<typeof cookies>>): string {
@@ -94,9 +99,13 @@ function parseEnvelope<T>(status: number, raw: unknown): T {
   }
   const body = raw as Envelope<T>;
   if ("success" in body && body.success === false) {
+    const code = body.error?.code ?? "INTERNAL_ERROR";
+    if (code === "PASSWORD_CHANGE_REQUIRED") {
+      redirect("/change-password");
+    }
     throw new ApiError(
       status,
-      body.error?.code ?? "INTERNAL_ERROR",
+      code,
       body.error?.message ?? "Something went wrong. Please try again.",
       body.error?.fields,
     );

@@ -3,6 +3,7 @@ import "server-only";
 import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost, apiUpload } from "@/lib/api/client";
 import { mapIntention } from "@/lib/api/adapters";
 import { ApiError, userMessage } from "@/lib/api/errors";
+import { rupeesToPaise } from "@/lib/api/money";
 import { getSession } from "@/lib/session";
 import { TODAY, formatPrayerDuration } from "@/lib/utils";
 import { toCsv } from "@/lib/csv";
@@ -317,8 +318,13 @@ function clientValidation(input: CreateIntentionInput): FieldErrors {
   if (input.source === "STAFF") {
     if (!input.payment) {
       errors.form = "Record how the offering was received (Cash or UPI / PhonePe).";
-    } else if (requiresTransactionId(input.payment.method) && !input.payment.transactionId?.trim()) {
-      errors.transactionId = "Transaction ID is required for UPI payments.";
+    } else {
+      if (!Number.isInteger(input.payment.amount) || input.payment.amount < 1) {
+        errors.amount = "Enter the amount the customer paid, in whole rupees.";
+      }
+      if (requiresTransactionId(input.payment.method) && !input.payment.transactionId?.trim()) {
+        errors.transactionId = "Transaction ID is required for UPI payments.";
+      }
     }
   }
   return errors;
@@ -332,6 +338,8 @@ function mapApiFields(fields?: Record<string, string>): FieldErrors {
   if (fields["customer.mobile"]) mapped.customerMobile = fields["customer.mobile"];
   if (fields["customer.email"]) mapped.customerEmail = fields["customer.email"];
   if (fields.transactionReference) mapped.transactionId = fields.transactionReference;
+  if (fields.amountPaise) mapped.amount = fields.amountPaise;
+  if (fields["payment.amountPaise"]) mapped.amount = fields["payment.amountPaise"];
   if (fields.payment) mapped.form = fields.payment;
   return mapped;
 }
@@ -371,6 +379,7 @@ export async function createIntention(input: CreateIntentionInput): Promise<Crea
     if (input.payment) {
       payload.payment = {
         method: input.payment.method,
+        amountPaise: rupeesToPaise(input.payment.amount),
         transactionReference:
           input.payment.method === "UPI" ? input.payment.transactionId?.trim() : undefined,
         provider: input.payment.provider || undefined,

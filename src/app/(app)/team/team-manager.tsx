@@ -3,11 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useActionState } from "react";
-import { Plus, ShieldCheck, UserCog, CheckCircle2, Copy, Mail } from "lucide-react";
+import { Plus, ShieldCheck, UserCog, CheckCircle2, KeyRound } from "lucide-react";
 import {
   createTeamMemberAction,
   deleteTeamMemberAction,
-  resendInvitationAction,
   setTeamMemberActiveAction,
   updateTeamMemberRoleAction,
   type TeamActionState,
@@ -16,10 +15,12 @@ import { switchWorkspaceAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/form";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Badge } from "@/components/ui/badge";
+import { ResetPasswordDialog } from "@/components/users/reset-password-dialog";
 import type { Role, UserView } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-import { notifyResult, toast } from "@/lib/feedback/toast";
+import { notifyResult } from "@/lib/feedback/toast";
 import { flashToast } from "@/lib/feedback/flash";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 
@@ -42,17 +43,22 @@ export function TeamManager({
 }) {
   const router = useRouter();
   const [addOpen, setAddOpen] = React.useState(false);
-  const [showInviteResult, setShowInviteResult] = React.useState(false);
+  const [showCreated, setShowCreated] = React.useState(false);
   const [state, formAction, pending] = useActionState(createTeamMemberAction, initialState);
   const [target, setTarget] = React.useState<UserView | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<UserView | null>(null);
+  const [resetTarget, setResetTarget] = React.useState<UserView | null>(null);
   const [roleTarget, setRoleTarget] = React.useState<UserView | null>(null);
   const [role, setRole] = React.useState<Role>("CHURCH_STAFF");
   const [busy, startTransition] = React.useTransition();
-  useActionFeedback(state, { successTitle: "Invitation sent", silentSuccess: true, silentError: true });
+  useActionFeedback(state, {
+    successTitle: "User account created successfully.",
+    silentSuccess: true,
+    silentError: true,
+  });
 
   React.useEffect(() => {
-    if (state.status === "success") setShowInviteResult(true);
+    if (state.status === "success") setShowCreated(true);
   }, [state]);
 
   const run = (
@@ -76,7 +82,7 @@ export function TeamManager({
         </p>
         <Button
           onClick={() => {
-            setShowInviteResult(false);
+            setShowCreated(false);
             setAddOpen(true);
           }}
         >
@@ -114,7 +120,7 @@ export function TeamManager({
                   {member.role === "CHURCH_ADMIN" ? "Church Admin" : "Church Staff"}
                 </Badge>
                 {member.invitationPending ? (
-                  <Badge tone="accent">Invited</Badge>
+                  <Badge tone="accent">Needs password</Badge>
                 ) : (
                   <Badge tone={member.isActive ? "success" : "neutral"}>
                     <span aria-hidden="true">{member.isActive ? "✓" : "•"}</span>
@@ -151,21 +157,15 @@ export function TeamManager({
                   <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
                   Change role
                 </Button>
-                {member.invitationPending ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() =>
-                      run(() => resendInvitationAction(member.id), {
-                        successTitle: "Invitation sent",
-                        errorTitle: "Unable to resend invitation",
-                      })
-                    }
-                  >
-                    Resend invite
-                  </Button>
-                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || member.id === currentUserId}
+                  onClick={() => setResetTarget(member)}
+                >
+                  <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+                  {member.invitationPending ? "Set password" : "Reset password"}
+                </Button>
                 <Button
                   size="sm"
                   variant={member.isActive ? "outline" : "success"}
@@ -191,18 +191,17 @@ export function TeamManager({
       </ul>
       )}
 
-      {/* Add member */}
       <Dialog
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        title={showInviteResult ? "Team member added" : "Add a team member"}
+        title={showCreated ? "Team member added" : "Add a team member"}
         description={
-          showInviteResult
-            ? "The account exists. They still need to set a password from the email (or the development link below)."
-            : "Enter name, email, role, and the church they belong to. We do not set a password here — they receive an email, open the link, and choose their own password, then sign in."
+          showCreated
+            ? "The account is ready. They sign in with the password you set, then choose a new one."
+            : "Enter name, email, role, church, and a password. No invitation email is sent."
         }
       >
-        {showInviteResult && state.status === "success" ? (
+        {showCreated && state.status === "success" ? (
           <div className="space-y-4">
             <p className="flex items-start gap-2 rounded-md border border-success/25 bg-success-muted/50 px-3 py-2.5 text-sm text-foreground">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
@@ -218,32 +217,9 @@ export function TeamManager({
                 <dd className="font-medium text-foreground">{state.allottedChurchName}</dd>
               </div>
             </dl>
-            <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
-              <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              An invitation email was queued to their address. If it does not arrive, use Resend
-              invite after you open that church&apos;s Team list.
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              They must choose a new password on first sign-in. You can reset it later from this list.
             </p>
-            {state.invitePath ? (
-              <div className="space-y-2 rounded-md border border-border bg-muted/40 px-3 py-2.5">
-                <p className="text-xs font-medium text-foreground">Set-password link (development)</p>
-                <p className="break-all font-mono text-[0.7rem] text-muted-foreground">{state.invitePath}</p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const url = `${window.location.origin}${state.invitePath}`;
-                    void navigator.clipboard.writeText(url).then(
-                      () => toast.success({ title: "Link copied", message: "Share this so they can set a password." }),
-                      () => toast.error({ title: "Could not copy", message: url }),
-                    );
-                  }}
-                >
-                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                  Copy set-password link
-                </Button>
-              </div>
-            ) : null}
             <div className="flex flex-wrap justify-end gap-2 pt-1">
               {state.otherChurch && state.allottedChurchId ? (
                 <Button
@@ -261,7 +237,7 @@ export function TeamManager({
                       });
                       if (result.status === "success") {
                         setAddOpen(false);
-                        setShowInviteResult(false);
+                        setShowCreated(false);
                         router.refresh();
                       }
                     });
@@ -281,7 +257,7 @@ export function TeamManager({
                     message: state.message,
                   });
                   setAddOpen(false);
-                  setShowInviteResult(false);
+                  setShowCreated(false);
                   router.refresh();
                 }}
               >
@@ -302,12 +278,7 @@ export function TeamManager({
             {(aria) => <Input {...aria} name="name" placeholder="Sr. Mary Grace" />}
           </Field>
 
-          <Field
-            id="member-email"
-            label="Email address"
-            required
-            description="The invitation and set-password link are sent here. There is no password field on this form."
-          >
+          <Field id="member-email" label="Email address" required>
             {(aria) => (
               <Input {...aria} name="email" type="email" placeholder="mary.grace@parish.example" />
             )}
@@ -354,6 +325,28 @@ export function TeamManager({
             </Field>
           ) : null}
 
+          <Field
+            id="member-password"
+            label="Password"
+            required
+            description="At least 10 characters. They must choose a new password on first sign-in."
+          >
+            {(aria) => (
+              <PasswordInput {...aria} name="password" autoComplete="new-password" minLength={10} />
+            )}
+          </Field>
+
+          <Field id="member-confirm-password" label="Confirm password" required>
+            {(aria) => (
+              <PasswordInput
+                {...aria}
+                name="confirmPassword"
+                autoComplete="new-password"
+                minLength={10}
+              />
+            )}
+          </Field>
+
           <p className="flex items-start gap-2 rounded-md border border-border bg-muted/50 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             A church administrator cannot create a platform administrator. That role is
@@ -372,7 +365,6 @@ export function TeamManager({
         )}
       </Dialog>
 
-      {/* Change role */}
       <Dialog
         open={!!roleTarget}
         onClose={() => setRoleTarget(null)}
@@ -411,7 +403,6 @@ export function TeamManager({
         </Field>
       </Dialog>
 
-      {/* Activate / deactivate */}
       <ConfirmDialog
         open={!!target}
         onClose={() => setTarget(null)}
@@ -451,6 +442,14 @@ export function TeamManager({
         confirmLabel="Delete account"
         tone="destructive"
         pending={busy}
+      />
+
+      <ResetPasswordDialog
+        open={!!resetTarget}
+        onClose={() => setResetTarget(null)}
+        userId={resetTarget?.id ?? ""}
+        userName={resetTarget?.name ?? ""}
+        userEmail={resetTarget?.email}
       />
     </div>
   );

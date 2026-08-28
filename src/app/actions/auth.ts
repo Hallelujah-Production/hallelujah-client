@@ -28,15 +28,15 @@ export async function signInAction(
   try {
     const { data } = await apiPost<{
       user: { role: Role };
+      mustChangePassword?: boolean;
     }>("/auth/login", { email, password }, { skipRefresh: true });
 
     if (process.env.NODE_ENV === "development") {
       console.info(`[auth] login action ${Date.now() - started}ms next=${landingRouteForRole(data.user.role)}`);
     }
 
-    // Cookies are applied inside apiRequest. Do not `redirect()`: Next.js
-    // would wait for the destination RSC (and all its Nest calls).
-    return { next: landingRouteForRole(data.user.role), email };
+    const next = data.mustChangePassword ? "/change-password" : landingRouteForRole(data.user.role);
+    return { next, email };
   } catch (error) {
     if (error instanceof ApiError) {
       return { error: userMessage(error, "Invalid email or password."), email };
@@ -86,6 +86,48 @@ export async function forgotPasswordAction(
 export interface ResetState {
   status: "idle" | "error" | "success";
   message?: string;
+  recoveryCode?: string;
+}
+
+export async function recoveryResetAction(
+  _prev: ResetState,
+  formData: FormData,
+): Promise<ResetState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const recoveryCode = String(formData.get("recoveryCode") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  if (!email) return { status: "error", message: "Enter the email address for your account." };
+  if (!recoveryCode) return { status: "error", message: "Enter your recovery code." };
+  if (password.length < 10) {
+    return { status: "error", message: "Use at least 10 characters." };
+  }
+  if (password !== confirmPassword) {
+    return { status: "error", message: "The two passwords do not match." };
+  }
+  try {
+    const { data, message } = await apiPost<{ recoveryCode: string }>(
+      "/auth/recovery/reset",
+      { email, recoveryCode, password, confirmPassword },
+      { skipRefresh: true },
+    );
+    return {
+      status: "success",
+      message: message ?? "Password reset successfully.",
+      recoveryCode: data.recoveryCode,
+    };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      if (error.code === "INVALID_CREDENTIALS") {
+        return { status: "error", message: "Those details do not match." };
+      }
+      return {
+        status: "error",
+        message: userMessage(error, "Those details do not match."),
+      };
+    }
+    throw error;
+  }
 }
 
 export async function setPasswordAction(
@@ -150,15 +192,24 @@ export async function changePasswordAction(
 ): Promise<ResetState> {
   const currentPassword = String(formData.get("currentPassword") ?? "");
   const newPassword = String(formData.get("newPassword") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
   if (!currentPassword) return { status: "error", message: "Enter your current password." };
   if (newPassword.length < 10) {
     return { status: "error", message: "Use at least 10 characters." };
   }
+  if (newPassword !== confirmPassword) {
+    return { status: "error", message: "The two passwords do not match." };
+  }
   try {
-    const { message } = await apiPost("/auth/change-password", { currentPassword, newPassword });
+    const { data, message } = await apiPost<{ recoveryCode?: string }>("/auth/change-password", {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
     return {
       status: "success",
       message: message ?? "Your password has been changed on every device.",
+      recoveryCode: data.recoveryCode,
     };
   } catch (error) {
     if (error instanceof ApiError) return { status: "error", message: userMessage(error) };

@@ -4,7 +4,6 @@ import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from "@/lib/api
 import { mapChurch, mapChurchView, mapPublicChurch } from "@/lib/api/adapters";
 import { ApiError } from "@/lib/api/errors";
 import type { Church, ChurchView, Paginated } from "@/lib/types";
-import { developmentInviteToken } from "./helpers";
 
 export async function getChurches(params: { search?: string } = {}): Promise<Church[]> {
   try {
@@ -40,6 +39,17 @@ export async function getChurchBySlug(slug: string): Promise<Church | null> {
     return mapPublicChurch(row);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
+    throw error;
+  }
+}
+
+/** Signed-in tenant profile, including service times Church Admin can edit. */
+export async function getOwnChurch(): Promise<Church | null> {
+  try {
+    const row = await apiGet<Record<string, unknown>>("/settings/church");
+    return mapChurch(row);
+  } catch (error) {
+    if (error instanceof ApiError && (error.isNotFound || error.isForbidden)) return null;
     throw error;
   }
 }
@@ -111,21 +121,21 @@ export interface CreateChurchInput {
   adminEmail?: string;
   adminPhone?: string;
   adminUserId?: string;
+  adminPassword?: string;
+  adminConfirmPassword?: string;
 }
 
 export async function createChurch(
   input: CreateChurchInput,
-): Promise<{ church: Church; invitationSent?: boolean; devInviteToken?: string }> {
+): Promise<{ church: Church; invitationSent?: boolean }> {
   const { data } = await apiPost<{
     church: Record<string, unknown>;
     admin: Record<string, unknown>;
     invitationSent?: boolean;
-    devInviteToken?: string;
   }>("/admin/churches", input);
   return {
     church: mapChurchView(data.church),
     invitationSent: data.invitationSent,
-    devInviteToken: developmentInviteToken(data.devInviteToken),
   };
 }
 

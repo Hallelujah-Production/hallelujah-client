@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Lock, Mail, Phone } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, DetailList, DetailRow } from "@/components/ui/card";
 import { StatCard, StatGrid } from "@/components/data/stat-card";
@@ -8,6 +8,7 @@ import { ChurchMark } from "@/components/layout/church-mark";
 import { requireChurchStaff } from "@/lib/guards";
 import { getStaffStats } from "@/lib/services";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import { ChangePasswordForm } from "@/app/(app)/settings/change-password-form";
 
 export const metadata: Metadata = {
   title: "My profile",
@@ -72,12 +73,14 @@ export default async function ProfilePage() {
               </li>
             </ul>
 
-            <div className="mt-5 flex items-start gap-2 rounded-md border border-border bg-muted/40 px-4 py-3">
-              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <div className="mt-5 rounded-md border border-border bg-muted/40 px-4 py-3">
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Your name, email and password are managed by your church administrator.
-                Speak to the parish office to have them changed.
+                Your name and email are managed by your church administrator. You can change your
+                own password below.
               </p>
+              <div className="mt-4">
+                <ChangePasswordForm />
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -195,6 +195,32 @@
   }
 }
 
+@keyframes auth-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes auth-overlay-bar {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.auth-overlay-in {
+  animation: auth-overlay-in 0.28s ease-out both;
+}
+
+.auth-overlay-bar {
+  animation: auth-overlay-bar 1.15s ease-in-out infinite;
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -216,23 +242,33 @@
 /* ---------- Print: official receipt locked to ISO A4 210mm × 297mm ---------- */
 @media print {
   @page {
-    size: 210mm 297mm;
+    size: A4 portrait;
     margin: 0;
   }
 
+  /*
+    Chrome rasterizes (blurs) print output when:
+    - a scroll container (overflow: auto/clip) wraps the sheet
+    - html/body are overflow:hidden at a fixed 297mm and content is 1px over,
+      which triggers shrink-to-fit at screen DPI
+    Keep the sheet as real HTML/CSS at 100% scale.
+  */
   html,
   body {
     width: 210mm !important;
-    height: 297mm !important;
+    height: auto !important;
     min-height: 0 !important;
-    max-height: 297mm !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
     background: #fff !important;
-    color: #111 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    -webkit-font-smoothing: auto !important;
+    -moz-osx-font-smoothing: auto !important;
   }
 
   [data-print="hide"],
@@ -254,6 +290,11 @@
     margin: 0 !important;
     max-width: none !important;
     width: 210mm !important;
+    overflow: visible !important;
+  }
+
+  .print\:space-y-0 > :not([hidden]) ~ * {
+    margin-top: 0 !important;
   }
 
   [data-print="area"] {
@@ -261,7 +302,7 @@
     flex-direction: column !important;
     position: static !important;
     box-sizing: border-box !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     width: 210mm !important;
     min-width: 210mm !important;
     max-width: 210mm !important;
@@ -270,17 +311,24 @@
     max-height: 297mm !important;
     padding: 12mm !important;
     box-shadow: none !important;
-    border: none !important;
+    /* Outer card chrome is screen-only; internals keep their borders below. */
+    border-width: 0 !important;
     background: #fff !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     break-inside: avoid;
     page-break-inside: avoid;
     page-break-after: avoid;
     overflow-wrap: normal;
     word-break: normal;
     hyphens: none;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    filter: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    -webkit-font-smoothing: auto !important;
+    -moz-osx-font-smoothing: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   [data-print="area"] h1,
@@ -301,10 +349,32 @@
     hyphens: none;
   }
 
+  /*
+    Screen --border is ~89% lightness; Chrome often drops that ink.
+    Keep the same grey family, just dark enough to actually print.
+    Do not override navy (border-primary) or signature (border-foreground/40).
+  */
+  [data-print="area"] .border-border {
+    border-color: #b7c0c9 !important;
+  }
+
+  [data-print="area"] .border-primary {
+    border-color: hsl(218 54% 18%) !important;
+  }
+
+  [data-print="area"] .border-foreground\/40 {
+    border-color: hsl(218 42% 12% / 0.55) !important;
+  }
+
+  [data-print="area"] table {
+    border-collapse: collapse !important;
+  }
+
   [data-print="area"] img {
     break-inside: avoid;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    max-width: none;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   a[href]::after {

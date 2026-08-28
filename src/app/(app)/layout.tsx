@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { ServiceUnavailable } from "@/components/feedback/service-unavailable";
 import { requireAuth } from "@/lib/guards";
@@ -38,6 +39,7 @@ async function loadAppSession(): Promise<Session | "unavailable"> {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await loadAppSession();
   if (session === "unavailable") return <ServiceUnavailable />;
+  if (session.mustChangePassword) redirect("/change-password");
 
   return (
     <AppShell session={session}>

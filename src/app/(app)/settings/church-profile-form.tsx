@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { saveChurchProfileAction, type SettingsState } from "@/app/actions/settings";
 import { Button } from "@/components/ui/button";
 import { Field, FormErrorSummary, FormRow, FormSection, Input, Textarea } from "@/components/ui/form";
@@ -9,10 +10,22 @@ import { useActionFeedback } from "@/hooks/use-action-feedback";
 import type { Church } from "@/lib/types";
 
 const initialState: SettingsState = { status: "idle" };
+const MAX_SERVICE_TIMES = 20;
+
+type ServiceTimeRow = { key: string; label: string; time: string };
+
+function newRow(label = "", time = ""): ServiceTimeRow {
+  return { key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, label, time };
+}
 
 export function ChurchProfileForm({ church }: { church: Church }) {
   const [state, formAction, pending] = useActionState(saveChurchProfileAction, initialState);
   useActionFeedback(state, { successTitle: "Profile saved", silentError: true });
+  const [serviceTimes, setServiceTimes] = React.useState<ServiceTimeRow[]>(() =>
+    church.serviceTimes.length
+      ? church.serviceTimes.map((row) => newRow(row.label, row.time))
+      : [newRow()],
+  );
 
   return (
     <form action={formAction} className="space-y-8" noValidate>
@@ -79,12 +92,85 @@ export function ChurchProfileForm({ church }: { church: Church }) {
         </FormRow>
       </FormSection>
 
+      <FormSection
+        title="Service times"
+        description="Shown on your public page. People submitting a prayer intention can choose these as a preferred time."
+      >
+        <div className="space-y-3">
+          {serviceTimes.map((row, index) => (
+            <div key={row.key} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <Field
+                id={`settings-service-label-${row.key}`}
+                label={index === 0 ? "Label" : `Label ${index + 1}`}
+                className={index === 0 ? "min-w-0 flex-1" : "min-w-0 flex-1 [&>label]:sr-only"}
+              >
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    name="serviceTimeLabel"
+                    value={row.label}
+                    onChange={(event) =>
+                      setServiceTimes((prev) =>
+                        prev.map((item) => (item.key === row.key ? { ...item, label: event.target.value } : item)),
+                      )
+                    }
+                    placeholder="Sunday Mass"
+                    maxLength={80}
+                  />
+                )}
+              </Field>
+              <Field
+                id={`settings-service-time-${row.key}`}
+                label={index === 0 ? "Time" : `Time ${index + 1}`}
+                className={index === 0 ? "min-w-0 flex-1" : "min-w-0 flex-1 [&>label]:sr-only"}
+              >
+                {(aria) => (
+                  <Input
+                    {...aria}
+                    name="serviceTimeTime"
+                    value={row.time}
+                    onChange={(event) =>
+                      setServiceTimes((prev) =>
+                        prev.map((item) => (item.key === row.key ? { ...item, time: event.target.value } : item)),
+                      )
+                    }
+                    placeholder="7:00 AM, 9:00 AM"
+                    maxLength={80}
+                  />
+                )}
+              </Field>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                aria-label="Remove service time"
+                disabled={serviceTimes.length <= 1}
+                onClick={() => setServiceTimes((prev) => prev.filter((item) => item.key !== row.key))}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={serviceTimes.length >= MAX_SERVICE_TIMES}
+          onClick={() => setServiceTimes((prev) => [...prev, newRow()])}
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          Add a service time
+        </Button>
+      </FormSection>
+
       <div className="flex flex-wrap items-center gap-3 border-t border-border pt-6">
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : "Save changes"}
         </Button>
         <p className="text-xs text-muted-foreground">
-          This preview stores changes in memory. Persistence arrives with the backend.
+          Empty rows are ignored. If you set no times, people can pick any preferred time on the prayer form.
         </p>
       </div>
     </form>

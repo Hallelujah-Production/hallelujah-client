@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useActionState } from "react";
 import { updateIntentionAction, type ActionState } from "@/app/actions/intentions";
 import { Button } from "@/components/ui/button";
-import { Field, FormRow, Input, Select, Textarea } from "@/components/ui/form";
+import { PreferredTimeField } from "@/components/domain/preferred-time-field";
+import { Field, FormRow, Input, Textarea } from "@/components/ui/form";
 import { flashToast } from "@/lib/feedback/flash";
 import { addDays, TODAY } from "@/lib/utils";
 import type { IntentionView } from "@/lib/types";
@@ -60,18 +61,7 @@ export function IntentionEditForm({ intention }: { intention: IntentionView }) {
             />
           )}
         </Field>
-        <Field id="preferredTime" label="Preferred time">
-          {(aria) => (
-            <Select {...aria} name="preferredTime" defaultValue={intention.preferredTime ?? ""}>
-              <option value="">No preference</option>
-              {["06:00", "06:30", "07:00", "09:00", "10:00", "16:00", "17:00", "18:00"].map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
+        <PreferredTimeField name="preferredTime" defaultValue={intention.preferredTime ?? ""} />
       </FormRow>
 
       <Field id="message" label="Message to the church">

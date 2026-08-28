@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChurchMark } from "@/components/layout/church-mark";
 import { PrayerIcon } from "@/components/domain/prayer-icon";
 import { requireChurchAdmin } from "@/lib/guards";
-import { getChurchTeam, getOfferedPrayerTypes, getPrayerTypeUsage } from "@/lib/services";
+import { getChurchTeam, getOfferedPrayerTypes, getOwnChurch, getPrayerTypeUsage } from "@/lib/services";
 import { first, formatCurrency } from "@/lib/utils";
 import { ChurchProfileForm } from "./church-profile-form";
 import { ChangePasswordForm } from "./change-password-form";
@@ -35,11 +35,13 @@ export default async function SettingsPage({
   const section = first(params.section) ?? "profile";
   const church = session.currentChurch;
 
-  const [prayerTypes, usage, team] = await Promise.all([
+  const [prayerTypes, usage, team, ownChurch] = await Promise.all([
     getOfferedPrayerTypes(),
     getPrayerTypeUsage(),
     getChurchTeam(church.id, { limit: 60 }),
+    getOwnChurch(),
   ]);
+  const profileChurch = ownChurch ?? church;
 
   return (
     <div className="space-y-6">
@@ -61,7 +63,7 @@ export default async function SettingsPage({
         <div className="grid gap-6 xl:grid-cols-[1fr_18rem] xl:items-start">
           <Card>
             <CardContent className="p-6">
-              <ChurchProfileForm church={church} />
+              <ChurchProfileForm church={profileChurch} />
             </CardContent>
           </Card>
 

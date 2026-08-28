@@ -14,10 +14,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, FormRow, Input, Select, Textarea } from "@/components/ui/form";
 import { FormStepper } from "@/components/domain/form-stepper";
 import { PrayerIcon } from "@/components/domain/prayer-icon";
+import { PreferredTimeField } from "@/components/domain/preferred-time-field";
 import { ProofUploader, type ProofDescriptor } from "@/components/domain/proof-uploader";
 import type { Church, PaymentMethod, PrayerType, User } from "@/lib/types";
 import { PAYMENT_METHOD_LABEL, requiresTransactionId } from "@/lib/types";
-import { addDays, cn, formatCurrency, formatLongDate, TODAY } from "@/lib/utils";
+import { addDays, cn, formatCurrency, formatLongDate, formatTime, TODAY } from "@/lib/utils";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const PUBLIC_STEPS = [
@@ -174,7 +175,7 @@ export function PrayerIntentionForm({
     customerMobile: "",
     customerEmail: "",
     customerAddress: "",
-    amount: String(prayerTypes.find((p) => p.id === defaultTypeId)?.suggestedAmount ?? ""),
+    amount: "",
     method: "CASH",
     provider: "",
     transactionId: "",
@@ -286,6 +287,10 @@ export function PrayerIntentionForm({
     }
 
     if (index === 2 && mode === "staff") {
+      const rupees = Number(values.amount);
+      if (!Number.isInteger(rupees) || rupees < 1) {
+        next.amount = "Enter the amount the customer paid, in whole rupees.";
+      }
       if (needsReference && !values.transactionId.trim()) {
         next.transactionId = `Transaction ID is required for ${PAYMENT_METHOD_LABEL[values.method]} payments.`;
       }
@@ -419,9 +424,6 @@ export function PrayerIntentionForm({
                       checked={active}
                       onChange={() => {
                         set("prayerTypeId", type.id);
-                        if (!values.amount || Number(values.amount) === (selectedType?.suggestedAmount ?? -1)) {
-                          set("amount", String(type.suggestedAmount));
-                        }
                       }}
                       className="sr-only"
                       suppressHydrationWarning
@@ -487,26 +489,10 @@ export function PrayerIntentionForm({
             </Field>
           </FormRow>
 
-          <Field
-            id="preferredTime"
-            label="Preferred time"
-            description="Optional. The parish will fit the intention into its schedule for that day."
-          >
-            {(aria) => (
-              <Select
-                {...aria}
-                value={values.preferredTime}
-                onChange={(e) => set("preferredTime", e.target.value)}
-              >
-                <option value="">No preference</option>
-                {["06:00", "06:30", "07:00", "09:00", "10:00", "16:00", "17:00", "18:00"].map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
+          <PreferredTimeField
+            value={values.preferredTime}
+            onChange={(next) => set("preferredTime", next)}
+          />
 
           <Field
             id="message"
@@ -689,11 +675,7 @@ export function PrayerIntentionForm({
               label="Amount paid"
               required
               error={errors.amount}
-              description={
-                selectedType
-                  ? `Taken from this church’s pricing for ${selectedType.name}. Existing intentions keep their snapshotted amount.`
-                  : undefined
-              }
+              description="Enter the amount the customer paid, in whole rupees."
             >
               {(aria) => (
                 <div className="relative">
@@ -705,11 +687,11 @@ export function PrayerIntentionForm({
                   </span>
                   <Input
                     {...aria}
-                    readOnly
-                    className="pl-7 bg-muted/40"
-                    value={String(selectedType?.suggestedAmount ?? values.amount)}
-                    onChange={(e) => set("amount", e.target.value)}
-                    placeholder="500"
+                    className="pl-7"
+                    inputMode="numeric"
+                    value={values.amount}
+                    onChange={(e) => set("amount", e.target.value.replace(/[^\d]/g, ""))}
+                    placeholder="0"
                   />
                 </div>
               )}
@@ -841,7 +823,7 @@ export function PrayerIntentionForm({
               <ReviewRow label="Offered for" value={values.prayerFor || "—"} />
               <ReviewRow label="Prayer date" value={formatLongDate(values.prayerDate)} />
               {values.preferredTime ? (
-                <ReviewRow label="Preferred time" value={values.preferredTime} />
+                <ReviewRow label="Preferred time" value={formatTime(values.preferredTime)} />
               ) : null}
               {values.message ? <ReviewRow label="Message" value={values.message} /> : null}
             </ReviewGroup>
@@ -879,7 +861,7 @@ export function PrayerIntentionForm({
             <ReviewGroup title="Payment record" last>
               <ReviewRow
                 label="Amount"
-                value={formatCurrency(selectedType?.suggestedAmount || Number(values.amount) || 0)}
+                value={formatCurrency(Number(values.amount) || 0)}
               />
               <ReviewRow label="Method" value={PAYMENT_METHOD_LABEL[values.method]} />
               {values.provider ? <ReviewRow label="Provider" value={values.provider} /> : null}

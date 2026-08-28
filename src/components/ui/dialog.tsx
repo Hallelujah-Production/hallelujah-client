@@ -74,18 +74,21 @@ export function Dialog({
         <h2 id={titleId} className="font-display text-base font-semibold tracking-tight text-foreground">
           {title}
         </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close dialog"
-          disabled={!dismissible}
-          className="-mr-1 rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
-          suppressHydrationWarning
-        >
-          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-            <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />
-          </svg>
-        </button>
+        {dismissible ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="-mr-1 rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            suppressHydrationWarning
+          >
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />
+            </svg>
+          </button>
+        ) : (
+          <span className="h-8 w-8" aria-hidden="true" />
+        )}
       </div>
 
       {description || children ? (

@@ -27,7 +27,13 @@ export async function getUserById(id: string): Promise<User | null> {
 
 export async function getChurchTeam(
   churchId: string,
-  params: { search?: string; role?: Role | "ALL"; page?: number; limit?: number; countsOnly?: boolean } = {},
+  params: {
+    search?: string;
+    role?: Role | "ALL";
+    page?: number;
+    limit?: number;
+    countsOnly?: boolean;
+  } = {},
 ): Promise<Paginated<UserView>> {
   const session = await getSession();
   if (session?.currentRole === "SUPER_ADMIN") {
@@ -135,51 +141,34 @@ export interface CreateUserInput {
   phone: string;
   role: Exclude<Role, "SUPER_ADMIN"> | Role;
   churchId: string | null;
+  password: string;
+  confirmPassword: string;
 }
 
 export async function createUser(
   input: CreateUserInput,
   actor: { role: Role; churchId: string | null },
-): Promise<
-  { ok: true; user: User; invitationSent?: boolean; devInviteToken?: string } | { ok: false; error: string }
-> {
+): Promise<{ ok: true; user: User } | { ok: false; error: string }> {
+  const payload = {
+    name: input.name,
+    email: input.email,
+    phone: input.phone || undefined,
+    role: input.role,
+    churchId: input.role === "SUPER_ADMIN" ? undefined : input.churchId,
+    password: input.password,
+    confirmPassword: input.confirmPassword,
+  };
   try {
     if (actor.role === "SUPER_ADMIN") {
-      const { data } = await apiPost<{
-        user: Record<string, unknown>;
-        invitationSent?: boolean;
-        devInviteToken?: string;
-      }>("/admin/users", {
-        name: input.name,
-        email: input.email,
-        phone: input.phone || undefined,
-        role: input.role,
-        churchId: input.role === "SUPER_ADMIN" ? undefined : input.churchId,
-      });
-      return {
-        ok: true,
-        user: mapUser(data.user),
-        invitationSent: data.invitationSent,
-        devInviteToken: developmentInviteToken(data.devInviteToken),
-      };
+      const { data } = await apiPost<{ user: Record<string, unknown> }>("/admin/users", payload);
+      return { ok: true, user: mapUser(data.user) };
     }
-    const { data } = await apiPost<{
-      user: Record<string, unknown>;
-      invitationSent?: boolean;
-      devInviteToken?: string;
-    }>("/team", {
-      name: input.name,
-      email: input.email,
-      phone: input.phone || undefined,
+    const { data } = await apiPost<{ user: Record<string, unknown> }>("/team", {
+      ...payload,
       role: input.role === "CHURCH_ADMIN" ? "CHURCH_ADMIN" : "CHURCH_STAFF",
       churchId: input.churchId || undefined,
     });
-    return {
-      ok: true,
-      user: mapUser(data.user),
-      invitationSent: data.invitationSent,
-      devInviteToken: developmentInviteToken(data.devInviteToken),
-    };
+    return { ok: true, user: mapUser(data.user) };
   } catch (error) {
     if (error instanceof ApiError) return { ok: false, error: userMessage(error) };
     throw error;
@@ -250,6 +239,23 @@ export async function revokeUserInvitation(userId: string): Promise<void> {
   } catch (error) {
     if (error instanceof ApiError && (error.isNotFound || error.isForbidden)) {
       await apiPost(`/admin/users/${userId}/invitation/revoke`, {});
+      return;
+    }
+    throw error;
+  }
+}
+
+export async function resetUserPassword(
+  userId: string,
+  password: string,
+  confirmPassword: string,
+): Promise<void> {
+  const body = { password, confirmPassword };
+  try {
+    await apiPost(`/team/${userId}/password`, body);
+  } catch (error) {
+    if (error instanceof ApiError && (error.isNotFound || error.isForbidden)) {
+      await apiPost(`/admin/users/${userId}/password`, body);
       return;
     }
     throw error;

@@ -55,7 +55,7 @@ export function Receipt({
           <BrandMark
             showName={false}
             size="lg"
-            className="shrink-0 print:opacity-100"
+            className="shrink-0"
           />
           <div className="min-w-0">
             <h2 className="font-display text-xl font-bold tracking-tight text-primary [text-wrap:wrap]">
@@ -109,7 +109,7 @@ export function Receipt({
       </div>
 
       {intention.message ? (
-        <div className="mt-5 rounded border border-dashed border-border bg-muted/40 px-4 py-3 print:bg-transparent">
+        <div className="mt-5 rounded border border-dashed border-border bg-muted/40 px-4 py-3">
           <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Intention
           </p>
@@ -122,7 +122,7 @@ export function Receipt({
         <table className="w-full table-fixed border-collapse text-sm">
           <caption className="sr-only">Payment recorded for this intention</caption>
           <thead>
-            <tr className="border-b border-border bg-muted/60 print:bg-transparent">
+            <tr className="border-b border-border bg-muted/60">
               <th scope="col" className="w-[40%] px-4 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Description
               </th>
@@ -158,7 +158,7 @@ export function Receipt({
                 {formatCurrency(payment.amount)}
               </td>
             </tr>
-            <tr className="bg-muted/40 print:bg-transparent">
+            <tr className="bg-muted/40">
               <td colSpan={3} className="px-4 py-3 text-right text-sm font-semibold text-foreground">
                 Total received
               </td>
