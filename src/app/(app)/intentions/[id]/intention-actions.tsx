@@ -113,8 +113,7 @@ export function IntentionActions({
 
       {!paymentVerified && !closed ? (
         <p className="text-xs text-muted-foreground">
-          You can allot this prayer now. Confirm the offering on Payments when you want to issue
-          the official receipt.
+          This offering is still awaiting confirmation. Allot prayer staff now if you wish.
         </p>
       ) : null}
 

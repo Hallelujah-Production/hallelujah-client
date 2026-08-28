@@ -401,8 +401,7 @@ export async function createIntention(input: CreateIntentionInput): Promise<Crea
       if (refreshed) intention = refreshed;
     }
 
-    // Do not auto-verify. Verify + receipt emails go out only when an admin
-    // confirms the offering on Payments. Create sends one confirmation mail.
+    // Counter recordings are accepted on create (verified + receipt).
     return { ok: true, intention };
   } catch (error) {
     if (error instanceof ApiError) {

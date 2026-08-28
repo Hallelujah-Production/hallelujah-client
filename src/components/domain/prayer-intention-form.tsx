@@ -890,7 +890,7 @@ export function PrayerIntentionForm({
               />
               <ReviewRow
                 label="Offering"
-                value="Paid — recorded at the parish. The office can still confirm it on Payments before a receipt is issued."
+                value="Paid at the parish. A receipt is issued with this intention — prayer can start once staff is allotted."
               />
             </ReviewGroup>
             </>
