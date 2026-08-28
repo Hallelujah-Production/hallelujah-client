@@ -274,17 +274,17 @@ export function TeamManager({
             </p>
           ) : null}
 
-          <Field id="member-name" label="Full name" required>
+          <Field id="member-name" label="Full name" required error={state.fields?.name}>
             {(aria) => <Input {...aria} name="name" placeholder="Sr. Mary Grace" />}
           </Field>
 
-          <Field id="member-email" label="Email address" required>
+          <Field id="member-email" label="Email address" required error={state.fields?.email}>
             {(aria) => (
               <Input {...aria} name="email" type="email" placeholder="mary.grace@parish.example" />
             )}
           </Field>
 
-          <Field id="member-phone" label="Phone number">
+          <Field id="member-phone" label="Phone number" error={state.fields?.phone}>
             {(aria) => <Input {...aria} name="phone" type="tel" placeholder="+91 98765 43210" />}
           </Field>
 
@@ -307,6 +307,7 @@ export function TeamManager({
               id="member-church"
               label="Allot to church"
               required
+              error={state.fields?.churchId}
               description="This person will belong to the parish you choose. They only see that church's records. This Team list stays on the parish in the header."
             >
               {(aria) => (
@@ -329,6 +330,7 @@ export function TeamManager({
             id="member-password"
             label="Password"
             required
+            error={state.fields?.password}
             description="At least 10 characters. They must choose a new password on first sign-in."
           >
             {(aria) => (
@@ -336,7 +338,7 @@ export function TeamManager({
             )}
           </Field>
 
-          <Field id="member-confirm-password" label="Confirm password" required>
+          <Field id="member-confirm-password" label="Confirm password" required error={state.fields?.confirmPassword}>
             {(aria) => (
               <PasswordInput
                 {...aria}

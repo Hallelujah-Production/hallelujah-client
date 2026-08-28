@@ -2,7 +2,7 @@ import "server-only";
 
 import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from "@/lib/api/client";
 import { mapUser, mapUserView } from "@/lib/api/adapters";
-import { ApiError, userMessage } from "@/lib/api/errors";
+import { ApiError, fieldErrors, userMessage } from "@/lib/api/errors";
 import { getSession } from "@/lib/session";
 import type { Paginated, Role, User, UserView } from "@/lib/types";
 import { developmentInviteToken } from "./helpers";
@@ -148,7 +148,7 @@ export interface CreateUserInput {
 export async function createUser(
   input: CreateUserInput,
   actor: { role: Role; churchId: string | null },
-): Promise<{ ok: true; user: User } | { ok: false; error: string }> {
+): Promise<{ ok: true; user: User } | { ok: false; error: string; fields?: Record<string, string> }> {
   const payload = {
     name: input.name,
     email: input.email,
@@ -170,7 +170,9 @@ export async function createUser(
     });
     return { ok: true, user: mapUser(data.user) };
   } catch (error) {
-    if (error instanceof ApiError) return { ok: false, error: userMessage(error) };
+    if (error instanceof ApiError) {
+      return { ok: false, error: userMessage(error), fields: fieldErrors(error) };
+    }
     throw error;
   }
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { requireSuperAdmin } from "@/lib/guards";
-import { getChurches } from "@/lib/services";
+import { getChurchViews } from "@/lib/services";
 import { CreateUserForm } from "./create-user-form";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function NewUserPage() {
   await requireSuperAdmin();
-  const churches = await getChurches();
+  const churches = await getChurchViews({ status: "ALL", page: 1, limit: 100 });
 
   return (
     <div className="space-y-6">
@@ -27,7 +27,7 @@ export default async function NewUserPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_18rem] xl:items-start">
         <div className="rounded-lg border border-border bg-card p-5 shadow-sm sm:p-7">
-          <CreateUserForm churches={churches} />
+          <CreateUserForm churches={churches.data} />
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-24">

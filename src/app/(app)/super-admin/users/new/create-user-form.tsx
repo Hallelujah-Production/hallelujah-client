@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Field, FormErrorSummary, FormRow, Input, Select } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
-import type { Church, Role } from "@/lib/types";
+import type { ChurchView, Role } from "@/lib/types";
 
 const initialState: TeamActionState = { status: "idle" };
 
-export function CreateUserForm({ churches }: { churches: Church[] }) {
+export function CreateUserForm({ churches }: { churches: Pick<ChurchView, "id" | "name" | "city">[] }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(createTeamMemberAction, initialState);
   const [role, setRole] = React.useState<Role>("CHURCH_ADMIN");
@@ -33,10 +33,10 @@ export function CreateUserForm({ churches }: { churches: Church[] }) {
       {state.status === "error" ? <FormErrorSummary message={state.message} /> : null}
 
       <FormRow>
-        <Field id="user-name" label="Full name" required>
+        <Field id="user-name" label="Full name" required error={state.fields?.name}>
           {(aria) => <Input {...aria} name="name" placeholder="Fr. George Mathew" />}
         </Field>
-        <Field id="user-email" label="Email address" required>
+        <Field id="user-email" label="Email address" required error={state.fields?.email}>
           {(aria) => (
             <Input {...aria} name="email" type="email" placeholder="admin@st-marys.example.com" />
           )}
@@ -44,7 +44,7 @@ export function CreateUserForm({ churches }: { churches: Church[] }) {
       </FormRow>
 
       <FormRow>
-        <Field id="user-phone" label="Phone number">
+        <Field id="user-phone" label="Phone number" error={state.fields?.phone}>
           {(aria) => <Input {...aria} name="phone" type="tel" placeholder="+91 98765 43210" />}
         </Field>
 
@@ -74,6 +74,7 @@ export function CreateUserForm({ churches }: { churches: Church[] }) {
           id="user-church"
           label="Church"
           required
+          error={state.fields?.churchId}
           description="The parish this account is allotted to. They sign in with this email and the password you set. Super Admin can later allot the same person to another church — still one login."
         >
           {(aria) => (
@@ -99,13 +100,14 @@ export function CreateUserForm({ churches }: { churches: Church[] }) {
           id="user-password"
           label="Password"
           required
+          error={state.fields?.password}
           description="At least 10 characters. They must choose a new password on first sign-in."
         >
           {(aria) => (
             <PasswordInput {...aria} name="password" autoComplete="new-password" minLength={10} />
           )}
         </Field>
-        <Field id="user-confirm-password" label="Confirm password" required>
+        <Field id="user-confirm-password" label="Confirm password" required error={state.fields?.confirmPassword}>
           {(aria) => (
             <PasswordInput
               {...aria}

@@ -12,9 +12,13 @@ import { ApiError, userMessage } from "@/lib/api/errors";
 import { getSession } from "@/lib/session";
 import type { Role } from "@/lib/types";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export interface TeamActionState {
   status: "idle" | "error" | "success";
   message?: string;
+  fields?: Record<string, string>;
   memberName?: string;
   allottedChurchId?: string;
   allottedChurchName?: string;
@@ -43,21 +47,44 @@ export async function createTeamMemberAction(
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-  if (!name) return { status: "error", message: "Enter the person's full name." };
+  if (!name) return { status: "error", message: "Enter the person's full name.", fields: { name: "Enter the person's full name." } };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { status: "error", message: "Enter a valid email address for the account." };
+    return {
+      status: "error",
+      message: "Enter a valid email address for the account.",
+      fields: { email: "Enter a valid email address for the account." },
+    };
   }
   if (password.length < 10) {
-    return { status: "error", message: "Use at least 10 characters." };
+    return {
+      status: "error",
+      message: "Use at least 10 characters.",
+      fields: { password: "Use at least 10 characters." },
+    };
   }
   if (password !== confirmPassword) {
-    return { status: "error", message: "The two passwords do not match." };
+    return {
+      status: "error",
+      message: "The two passwords do not match.",
+      fields: { confirmPassword: "The two passwords do not match." },
+    };
   }
   if (session.currentRole !== "SUPER_ADMIN" && requestedRole === "SUPER_ADMIN") {
     return { status: "error", message: "Only the platform can create platform administrators." };
   }
   if (session.currentRole === "SUPER_ADMIN" && requestedRole !== "SUPER_ADMIN" && !churchId) {
-    return { status: "error", message: "Name the church this account belongs to." };
+    return {
+      status: "error",
+      message: "Name the church this account belongs to.",
+      fields: { churchId: "Name the church this account belongs to." },
+    };
+  }
+  if (requestedRole !== "SUPER_ADMIN" && churchId && !UUID_RE.test(churchId)) {
+    return {
+      status: "error",
+      message: "Select a church from the list.",
+      fields: { churchId: "Select a church from the list." },
+    };
   }
 
   const result = await createUser(
@@ -65,7 +92,7 @@ export async function createTeamMemberAction(
     { role: session.currentRole, churchId: session.currentChurch?.id ?? null },
   );
 
-  if (!result.ok) return { status: "error", message: result.error };
+  if (!result.ok) return { status: "error", message: result.error, fields: result.fields };
 
   revalidatePath("/team");
   revalidatePath("/super-admin/users");
