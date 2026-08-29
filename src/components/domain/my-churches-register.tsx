@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Download, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { LiveRefresh } from "@/components/data/live-refresh";
 import { SearchInput } from "@/components/data/search-input";
 import { FilterBar } from "@/components/data/filter-bar";
 import { DataTable, type Column } from "@/components/data/data-table";
@@ -79,7 +80,7 @@ export function MyChurchesRegister({
         <span>
           <span className="block font-medium text-foreground">{row.customer.name}</span>
           <span className="block text-xs tabular-nums text-muted-foreground">
-            {row.customer.mobile}
+            {row.customer.mobile ?? "—"}
           </span>
         </span>
       ),
@@ -150,6 +151,7 @@ export function MyChurchesRegister({
 
   return (
     <div className="space-y-6">
+      <LiveRefresh />
       <PageHeader
         breadcrumb={[breadcrumbHome, { label: "My Churches" }]}
         title="My Churches"

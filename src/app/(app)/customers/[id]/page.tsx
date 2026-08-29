@@ -207,9 +207,13 @@ export default async function CustomerDetailPage({
               <ul className="space-y-3 border-t border-border pt-4 text-sm">
                 <li className="flex items-center gap-3">
                   <Phone className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  <a href={`tel:${customer.mobile}`} className="tabular-nums text-foreground hover:underline">
-                    {customer.mobile}
-                  </a>
+                  {customer.mobile ? (
+                    <a href={`tel:${customer.mobile}`} className="tabular-nums text-foreground hover:underline">
+                      {customer.mobile}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">Not provided</span>
+                  )}
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

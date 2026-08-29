@@ -20,11 +20,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * One route, two experiences. Both roles land on /dashboard; what they see is
- * decided by the role on the session, never by the URL.
+ * Church Admin lands on Create Intention. Staff lands here as a prayer queue.
+ * Role still decides the experience — never the URL.
  *
- * Church Admin data starts in parallel with /auth/me. Staff data starts after
- * role is known so we do not contend the connection pool with 403s.
+ * Staff queue starts in parallel with /auth/me so login is not an auth → data waterfall.
  */
 export default async function DashboardPage() {
   const sessionPromise = getSession();
@@ -33,6 +32,8 @@ export default async function DashboardPage() {
   const awaitingP = ignoreForbidden(
     getIntentions("", { paymentStatus: "PENDING_VERIFICATION", limit: 5 }),
   );
+  const staffQueueP = ignoreForbidden(getStaffIntentions("", "", "queue", { limit: 100 }));
+  const staffStatsP = ignoreForbidden(getStaffStats("", ""));
 
   const session = assertChurchSession(await sessionPromise);
 
@@ -50,15 +51,15 @@ export default async function DashboardPage() {
     );
   }
 
-  const [stats, today, upcoming] = await Promise.all([
-    getStaffStats(session.currentChurch.id, session.currentUser.id),
-    getStaffIntentions(session.currentChurch.id, session.currentUser.id, "today", { limit: 20 }),
-    getStaffIntentions(session.currentChurch.id, session.currentUser.id, "upcoming", { limit: 6 }),
-  ]);
+  const [assigned, stats] = await Promise.all([staffQueueP, staffStatsP]);
 
   return (
     <Suspense fallback={<DashboardLoading />}>
-      <StaffDashboard session={session} stats={stats} today={today} upcoming={upcoming} />
+      <StaffDashboard
+        session={session}
+        assigned={assigned ?? undefined}
+        stats={stats ?? undefined}
+      />
     </Suspense>
   );
 }

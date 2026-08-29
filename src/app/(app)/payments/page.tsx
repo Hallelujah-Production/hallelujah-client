@@ -64,7 +64,7 @@ export default async function PaymentsPage({
         <span>
           <span className="block font-medium text-foreground">{row.customer.name}</span>
           <span className="block text-xs tabular-nums text-muted-foreground">
-            {row.customer.mobile}
+            {row.customer.mobile ?? "—"}
           </span>
         </span>
       ),

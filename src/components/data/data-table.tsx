@@ -58,7 +58,7 @@ export function DataTable<T extends { id: string }>({
       {/* Desktop */}
       <div className={cn("hidden rounded-lg border border-border bg-card shadow-sm lg:block", className)}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[46rem] border-collapse text-sm">
+          <table className="w-max min-w-full border-collapse whitespace-nowrap text-sm">
             <caption className="sr-only">{caption}</caption>
             <thead>
               <tr className="border-b border-border bg-muted/50">
@@ -101,7 +101,7 @@ export function DataTable<T extends { id: string }>({
                       {index === 0 && href ? (
                         <Link
                           href={href}
-                          className="rounded font-medium text-foreground underline-offset-4 outline-none transition-colors hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                          className="inline-block rounded font-medium text-foreground underline-offset-4 outline-none transition-colors hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           {column.cell(row)}
                         </Link>

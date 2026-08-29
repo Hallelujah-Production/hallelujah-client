@@ -1,9 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { cookies } from "next/headers";
-import { apiGet } from "@/lib/api/client";
-import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/api/cookies";
+import { apiGet, hasSessionCookie } from "@/lib/api/client";
 import { mapChurch, mapUser } from "@/lib/api/adapters";
 import { ApiError } from "@/lib/api/errors";
 import type { Church, Role, User } from "@/lib/types";
@@ -37,8 +35,7 @@ interface AuthMe {
  * are unused by the UI, so session is a single `/auth/me` per request.
  */
 export const getSession = cache(async (): Promise<Session | null> => {
-  const store = await cookies();
-  if (!store.get(ACCESS_COOKIE)?.value && !store.get(REFRESH_COOKIE)?.value) {
+  if (!(await hasSessionCookie())) {
     return null;
   }
 
@@ -88,7 +85,9 @@ export async function requireSession(): Promise<Session> {
 }
 
 export function landingRouteForRole(role: Role): string {
-  return role === "SUPER_ADMIN" ? "/super-admin" : "/dashboard";
+  if (role === "SUPER_ADMIN") return "/super-admin";
+  if (role === "CHURCH_ADMIN") return "/intentions/new";
+  return "/dashboard";
 }
 
 export function isChurchRole(role: Role): boolean {

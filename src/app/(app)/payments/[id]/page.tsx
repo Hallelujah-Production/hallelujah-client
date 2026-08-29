@@ -230,7 +230,7 @@ export default async function PaymentDetailPage({
               <DetailList>
                 <DetailRow label="Name">{payment.customer.name}</DetailRow>
                 <DetailRow label="Mobile">
-                  <span className="tabular-nums">{payment.customer.mobile}</span>
+                  <span className="tabular-nums">{payment.customer.mobile ?? "—"}</span>
                 </DetailRow>
                 <DetailRow label="Email">
                   {payment.customer.email ?? <span className="text-muted-foreground">—</span>}

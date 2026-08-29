@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, FileText, Printer } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { LiveRefresh } from "@/components/data/live-refresh";
 import { Card, CardContent, CardHeader, CardTitle, DetailList, DetailRow } from "@/components/ui/card";
 import { MethodBadge, PaymentStatusBadge, StatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export default async function IntentionDetailPage({
 
   return (
     <div className="space-y-6">
+      <LiveRefresh />
       <PageHeader
         breadcrumb={[
           { label: "Dashboard", href: "/dashboard" },
@@ -343,9 +345,13 @@ export default async function IntentionDetailPage({
               <DetailList>
                 <DetailRow label="Name">{customer.name}</DetailRow>
                 <DetailRow label="Mobile">
-                  <a href={`tel:${customer.mobile}`} className="tabular-nums hover:underline">
-                    {customer.mobile}
-                  </a>
+                  {customer.mobile ? (
+                    <a href={`tel:${customer.mobile}`} className="tabular-nums hover:underline">
+                      {customer.mobile}
+                    </a>
+                  ) : (
+                    <span className="text-muted-foreground">Not provided</span>
+                  )}
                 </DetailRow>
                 <DetailRow label="Email">
                   {customer.email ?? <span className="text-muted-foreground">Not provided</span>}

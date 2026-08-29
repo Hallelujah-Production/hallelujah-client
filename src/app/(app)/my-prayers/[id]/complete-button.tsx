@@ -128,6 +128,7 @@ function PrayerActionButton({
         result.completedAt ?? new Date().toISOString(),
       );
       setThanks({ duration });
+      router.refresh();
     });
   };
 
