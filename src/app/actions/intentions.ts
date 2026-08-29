@@ -22,6 +22,12 @@ export interface SubmitIntentionState {
   reference?: string;
   intentionId?: string;
   churchName?: string;
+  prayerTypeName?: string;
+  personName?: string;
+  prayerFor?: string;
+  staffName?: string;
+  amount?: number;
+  receiptId?: string;
 }
 
 export async function submitIntentionAction(
@@ -134,6 +140,7 @@ export async function createIntentionAction(
 
   const proof = formData.get("proof");
   const proofFile = proof instanceof File && proof.size > 0 ? proof : null;
+  const mobile = String(formData.get("customerMobile") ?? "").trim();
 
   const result = await createIntention({
     churchId: destination.id,
@@ -145,13 +152,13 @@ export async function createIntentionAction(
     message: String(formData.get("message") ?? "") || undefined,
     customer: {
       name: String(formData.get("customerName") ?? ""),
-      mobile: String(formData.get("customerMobile") ?? ""),
+      ...(mobile ? { mobile } : {}),
       email: String(formData.get("customerEmail") ?? "") || undefined,
       addressLine: String(formData.get("customerAddress") ?? "") || undefined,
     },
     payment: {
       amount: Number(formData.get("amount") ?? 0),
-      method: String(formData.get("method") ?? "CASH") as PaymentMethod,
+      method: (String(formData.get("method") ?? "CASH") || "CASH") as PaymentMethod,
       provider: String(formData.get("provider") ?? "") || undefined,
       transactionId: String(formData.get("transactionId") ?? "") || undefined,
       notes: String(formData.get("paymentNotes") ?? "") || undefined,
@@ -175,6 +182,12 @@ export async function createIntentionAction(
     reference: result.intention.reference,
     intentionId: result.intention.id,
     churchName: destination.name,
+    prayerTypeName: result.intention.prayerType.name,
+    personName: result.intention.requestedBy || result.intention.customer.name,
+    prayerFor: result.intention.prayerFor,
+    staffName: result.intention.assignedStaff?.name,
+    amount: result.intention.amount,
+    receiptId: result.intention.receiptId,
   };
 }
 
@@ -195,14 +208,16 @@ export async function completeIntentionAction(intentionId: string): Promise<Acti
   try {
     const result = await completeIntention("", intentionId, "");
     if (!result) return { status: "error", message: "That prayer intention could not be found." };
-    revalidatePath(`/intentions/${intentionId}`);
-    revalidatePath(`/my-prayers/${intentionId}`);
-    revalidatePath("/my-prayers");
-    revalidatePath("/intentions");
+    revalidatePath("/intentions", "layout");
+    revalidatePath("/my-prayers", "layout");
     revalidatePath("/dashboard");
     revalidatePath("/completed");
+    revalidatePath("/upcoming");
     revalidatePath("/my-churches");
     revalidatePath("/super-admin/my-churches");
+    revalidatePath("/super-admin/churches", "layout");
+    revalidatePath(`/intentions/${intentionId}`);
+    revalidatePath(`/my-prayers/${intentionId}`);
     return {
       status: "success",
       message: "Prayer marked as completed.",

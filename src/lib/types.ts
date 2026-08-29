@@ -96,7 +96,7 @@ export interface Customer {
   id: string;
   churchId: string;
   name: string;
-  mobile: string;
+  mobile: string | null;
   email?: string;
   addressLine?: string;
   city?: string;

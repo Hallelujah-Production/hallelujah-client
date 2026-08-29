@@ -5,10 +5,12 @@ import {
   cookieHeaderFromEntries,
   CSRF_COOKIE,
   CSRF_HEADER,
+  isAccessJwtExpired,
   mergeRequestCookies,
   parseSetCookie,
   readSetCookies,
   REFRESH_COOKIE,
+  SESSION_COOKIE_HEADER,
 } from "@/lib/api/cookies";
 import { withApiPrefix } from "@/lib/api/origin";
 
@@ -30,18 +32,15 @@ function refreshOnce(refreshToken: string, run: () => Promise<Response>): Promis
 }
 
 /**
- * When the access cookie has expired, rotate the session before the page
- * renders. Server Components cannot persist Set-Cookie; middleware can.
- *
- * New cookies are copied onto both the browser response AND the continuing
- * request. Without that, RSC still sees the old Cookie header, the BFF
- * refreshes again with the spent token, reuse detection fires, and the user
- * is signed out.
+ * When the access JWT has expired, rotate before the page renders.
+ * Server Components cannot persist Set-Cookie; middleware can — and it must
+ * forward the new Cookie header on this same request so the BFF does not
+ * refresh again with the spent token (reuse detection would sign the user out).
  */
 export async function middleware(request: NextRequest) {
   const access = request.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
-  if (access || !refresh) return NextResponse.next();
+  if (!refresh || !isAccessJwtExpired(access)) return NextResponse.next();
 
   const csrf = request.cookies.get(CSRF_COOKIE)?.value;
   const headers: Record<string, string> = {
@@ -64,18 +63,21 @@ export async function middleware(request: NextRequest) {
       .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
     const requestCookies = mergeRequestCookies(request.cookies.getAll(), parsed);
-    if (!upstream.ok) {
+    const refreshRejected = !upstream.ok && upstream.status === 401;
+    if (refreshRejected) {
       requestCookies.delete(ACCESS_COOKIE);
       requestCookies.delete(REFRESH_COOKIE);
       requestCookies.delete(CSRF_COOKIE);
     }
 
+    const forwarded = cookieHeaderFromEntries(requestCookies);
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("cookie", cookieHeaderFromEntries(requestCookies));
+    requestHeaders.set("cookie", forwarded);
+    requestHeaders.set(SESSION_COOKIE_HEADER, forwarded);
 
     const response = NextResponse.next({ request: { headers: requestHeaders } });
     applyParsedCookies(response.cookies, parsed);
-    if (!upstream.ok) {
+    if (refreshRejected) {
       response.cookies.delete(ACCESS_COOKIE);
       response.cookies.delete(REFRESH_COOKIE);
       response.cookies.delete(CSRF_COOKIE);

@@ -43,7 +43,7 @@ export default async function CustomersPage({
     {
       key: "mobile",
       header: "Mobile",
-      cell: (row) => <span className="tabular-nums">{row.mobile}</span>,
+      cell: (row) => <span className="tabular-nums">{row.mobile ?? "—"}</span>,
     },
     {
       key: "email",
@@ -128,7 +128,7 @@ export default async function CustomersPage({
                 <Link href={`/customers/${row.id}`} className="font-medium text-foreground hover:underline">
                   {row.name}
                 </Link>
-                <p className="text-xs tabular-nums text-muted-foreground">{row.mobile}</p>
+                <p className="text-xs tabular-nums text-muted-foreground">{row.mobile ?? "—"}</p>
               </div>
               <span className="text-sm font-medium tabular-nums text-foreground">
                 {formatCurrency(row.totalPaid)}

@@ -1,14 +1,21 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Paginated } from "@/lib/types";
 import {
   ACCESS_COOKIE,
+  applyParsedToCookieMap,
   applySetCookieHeaders,
   CSRF_COOKIE,
   CSRF_HEADER,
+  parseCookieHeader,
+  parseSetCookie,
+  type ParsedCookie,
+  readSetCookies,
   REFRESH_COOKIE,
+  serializeCookieMap,
+  SESSION_COOKIE_HEADER,
 } from "./cookies";
 import { ApiError } from "./errors";
 import { withApiPrefix } from "./origin";
@@ -55,13 +62,29 @@ export interface RequestOptions {
  * One refresh at a time per Node process. Concurrent 401s wait for the same
  * promise so they do not each rotate the same refresh token.
  */
-let refreshInFlight: Promise<boolean> | null = null;
+type RefreshResult = { ok: boolean; cookies: ParsedCookie[] };
 
-function cookieHeader(store: Awaited<ReturnType<typeof cookies>>): string {
-  return store
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
+let refreshInFlight: Promise<RefreshResult> | null = null;
+
+async function cookieMapForRequest(
+  store: Awaited<ReturnType<typeof cookies>>,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  for (const cookie of store.getAll()) {
+    if (cookie.value) map.set(cookie.name, cookie.value);
+  }
+  try {
+    const forwarded = (await headers()).get(SESSION_COOKIE_HEADER);
+    if (forwarded) {
+      for (const [name, value] of parseCookieHeader(forwarded)) {
+        if (value) map.set(name, value);
+        else map.delete(name);
+      }
+    }
+  } catch {
+    // headers() is unavailable outside a request.
+  }
+  return map;
 }
 
 async function persistUpstreamCookies(response: Response): Promise<void> {
@@ -69,33 +92,49 @@ async function persistUpstreamCookies(response: Response): Promise<void> {
     const store = await cookies();
     applySetCookieHeaders(store, response.headers);
   } catch {
-    // RSC cannot write cookies. Middleware rotates the session before render.
+    // RSC cannot write cookies. Retry uses Set-Cookie from this response directly.
   }
 }
 
-async function refreshSession(): Promise<boolean> {
-  if (refreshInFlight) return refreshInFlight;
-  refreshInFlight = (async () => {
-    const store = await cookies();
-    const csrf = store.get(CSRF_COOKIE)?.value;
-    const headers: Record<string, string> = {
-      cookie: cookieHeader(store),
-      accept: "application/json",
-    };
-    if (csrf) headers[CSRF_HEADER] = csrf;
-    const response = await fetch(apiUrl("/auth/refresh"), {
-      method: "POST",
-      headers,
-      cache: "no-store",
+function setCookiesFrom(response: Response): ParsedCookie[] {
+  return readSetCookies(response.headers)
+    .map(parseSetCookie)
+    .filter((cookie): cookie is ParsedCookie => Boolean(cookie));
+}
+
+async function runRefresh(): Promise<RefreshResult> {
+  const store = await cookies();
+  const cookieMap = await cookieMapForRequest(store);
+  const csrf = cookieMap.get(CSRF_COOKIE);
+  const requestHeaders: Record<string, string> = {
+    cookie: serializeCookieMap(cookieMap),
+    accept: "application/json",
+  };
+  if (csrf) requestHeaders[CSRF_HEADER] = csrf;
+
+  const response = await fetch(apiUrl("/auth/refresh"), {
+    method: "POST",
+    headers: requestHeaders,
+    cache: "no-store",
+  });
+  const rotated = setCookiesFrom(response);
+  await persistUpstreamCookies(response);
+  return { ok: response.ok, cookies: rotated };
+}
+
+function refreshSession(): Promise<RefreshResult> {
+  if (!refreshInFlight) {
+    refreshInFlight = runRefresh().finally(() => {
+      refreshInFlight = null;
     });
-    await persistUpstreamCookies(response);
-    return response.ok;
-  })();
-  try {
-    return await refreshInFlight;
-  } finally {
-    refreshInFlight = null;
   }
+  return refreshInFlight;
+}
+
+export async function hasSessionCookie(): Promise<boolean> {
+  const store = await cookies();
+  const map = await cookieMapForRequest(store);
+  return Boolean(map.get(ACCESS_COOKIE) || map.get(REFRESH_COOKIE));
 }
 
 function parseEnvelope<T>(status: number, raw: unknown): T {
@@ -130,21 +169,22 @@ export async function apiRequest<T>(
   options: RequestOptions = {},
 ): Promise<{ data: T; message?: string; meta?: ApiSuccess<T>["meta"] }> {
   const store = await cookies();
-  const headers: Record<string, string> = {
+  const cookieMap = await cookieMapForRequest(store);
+  const requestHeaders: Record<string, string> = {
     accept: "application/json",
-    cookie: cookieHeader(store),
+    cookie: serializeCookieMap(cookieMap),
   };
 
-  const csrf = store.get(CSRF_COOKIE)?.value;
+  const csrf = cookieMap.get(CSRF_COOKIE);
   if (MUTATING.has(method) && !options.skipCsrf && csrf) {
-    headers[CSRF_HEADER] = csrf;
+    requestHeaders[CSRF_HEADER] = csrf;
   }
 
   let body: BodyInit | undefined;
   if (options.formData) {
     body = options.formData;
   } else if (options.body !== undefined) {
-    headers["content-type"] = "application/json";
+    requestHeaders["content-type"] = "application/json";
     body = JSON.stringify(options.body);
   }
 
@@ -152,7 +192,7 @@ export async function apiRequest<T>(
   const started = Date.now();
   const init: RequestInit = {
     method,
-    headers,
+    headers: requestHeaders,
     body,
     cache: "no-store",
   };
@@ -174,16 +214,15 @@ export async function apiRequest<T>(
   const isAuthPath = path.startsWith("/auth/login") || path.startsWith("/auth/refresh");
 
   if (response.status === 401 && !options.skipRefresh && !isAuthPath) {
-    const hasRefresh = Boolean(store.get(REFRESH_COOKIE)?.value || store.get(ACCESS_COOKIE)?.value);
-    if (hasRefresh) {
-      const ok = await refreshSession();
-      if (ok) {
-        const retryStore = await cookies();
+    if (cookieMap.get(REFRESH_COOKIE) || store.get(REFRESH_COOKIE)?.value) {
+      const rotated = await refreshSession();
+      if (rotated.ok) {
+        applyParsedToCookieMap(cookieMap, rotated.cookies);
         const retryHeaders: Record<string, string> = {
           accept: "application/json",
-          cookie: cookieHeader(retryStore),
+          cookie: serializeCookieMap(cookieMap),
         };
-        const retryCsrf = retryStore.get(CSRF_COOKIE)?.value;
+        const retryCsrf = cookieMap.get(CSRF_COOKIE);
         if (MUTATING.has(method) && !options.skipCsrf && retryCsrf) {
           retryHeaders[CSRF_HEADER] = retryCsrf;
         }

@@ -38,6 +38,7 @@ export async function getIntentions(
       paymentStatus: query.paymentStatus,
       from: query.from,
       to: query.to,
+      progress: query.progress && query.progress !== "ALL" ? query.progress : undefined,
       countsOnly: query.countsOnly ? true : undefined,
     },
   });
@@ -56,9 +57,11 @@ export async function getIntentionRegister(
       progress: query.progress && query.progress !== "ALL" ? query.progress : undefined,
       status: query.status,
       prayerTypeId: query.prayerTypeId && query.prayerTypeId !== "ALL" ? query.prayerTypeId : undefined,
+      staffId: query.staffId && query.staffId !== "ALL" ? query.staffId : undefined,
       paymentStatus: query.paymentStatus && query.paymentStatus !== "ALL" ? query.paymentStatus : undefined,
       from: query.from,
       to: query.to,
+      countsOnly: query.countsOnly ? true : undefined,
     },
   });
   return { ...result, data: result.data.map((row) => mapIntention(row)) };
@@ -137,7 +140,7 @@ function intentionRegisterToCsv(rows: IntentionView[]): string {
       asDateCell(row.createdAt),
       row.createdByName ?? (row.source === "PUBLIC" ? "Public page" : ""),
       row.customer.name,
-      row.customer.mobile,
+      row.customer.mobile ?? "",
       row.prayerFor,
       row.prayerType.name,
       asDateCell(row.prayerDate),
@@ -218,7 +221,7 @@ export async function getCustomerIntentions(
   return result.data.map((row) => mapIntention(row));
 }
 
-export type StaffScope = "today" | "upcoming" | "completed" | "all";
+export type StaffScope = "today" | "upcoming" | "completed" | "all" | "queue";
 
 export async function getStaffIntentions(
   _churchId: string,
@@ -262,7 +265,7 @@ export interface CreateIntentionInput {
   customer: {
     id?: string;
     name: string;
-    mobile: string;
+    mobile?: string;
     email?: string;
     addressLine?: string;
     city?: string;
@@ -296,8 +299,10 @@ function clientValidation(input: CreateIntentionInput): FieldErrors {
   if (!input.customer.name?.trim()) {
     errors.customerName = "Enter your full name so the church can identify the intention.";
   }
-  if (!/^[0-9]{10}$/.test(input.customer.mobile.replace(/\s|-/g, ""))) {
-    errors.customerMobile = "Enter a valid 10-digit mobile number.";
+  if (input.source === "PUBLIC") {
+    if (!/^[0-9]{10}$/.test((input.customer.mobile ?? "").replace(/\s|-/g, ""))) {
+      errors.customerMobile = "Enter a valid 10-digit mobile number.";
+    }
   }
   if (input.customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.customer.email)) {
     errors.customerEmail = "Enter a valid email address, or leave it blank.";
@@ -338,9 +343,10 @@ export async function createIntention(input: CreateIntentionInput): Promise<Crea
   const errors = clientValidation(input);
   if (Object.keys(errors).length) return { ok: false, errors };
 
+  const mobile = (input.customer.mobile ?? "").replace(/\s|-/g, "");
   const customer = {
     name: input.customer.name.trim(),
-    mobile: input.customer.mobile.replace(/\s|-/g, ""),
+    ...(mobile ? { mobile } : {}),
     email: input.customer.email?.trim() || undefined,
     addressLine: input.customer.addressLine?.trim() || undefined,
     city: input.customer.city,
@@ -391,7 +397,20 @@ export async function createIntention(input: CreateIntentionInput): Promise<Crea
       if (refreshed) intention = refreshed;
     }
 
-    // Counter recordings are accepted on create (verified + receipt).
+    if (!intention.receiptId && intention.reference) {
+      try {
+        const receipts = await apiGetPaginated<Record<string, unknown>>("/receipts", {
+          query: { search: intention.reference, limit: 5 },
+        });
+        const match = receipts.data.find(
+          (row) => row.intentionReference === intention.reference || row.intentionId === intention.id,
+        );
+        if (match) intention.receiptId = String(match.id);
+      } catch {
+        // Receipt is already issued on create; the id is optional for Print.
+      }
+    }
+
     return { ok: true, intention };
   } catch (error) {
     if (error instanceof ApiError) {

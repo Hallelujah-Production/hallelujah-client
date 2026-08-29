@@ -130,7 +130,7 @@ export function mapCustomer(dto: Record<string, unknown>, churchId?: string): Cu
     id: str(dto.id),
     churchId: str(dto.churchId || churchId),
     name: str(dto.name),
-    mobile: str(dto.mobile),
+    mobile: opt(dto.mobile) ?? null,
     email: opt(dto.email),
     addressLine: opt(dto.addressLine),
     city: opt(dto.city),
@@ -325,7 +325,7 @@ export function mapReceiptListItem(
     id: str(dto.customerId),
     churchId: churchResolved.id,
     name: str(dto.customerName),
-    mobile: str(dto.customerMobile),
+    mobile: opt(dto.customerMobile) ?? null,
     createdAt: "",
   };
   const intention: Intention = {
@@ -396,7 +396,7 @@ export function mapOfficialReceipt(
     id: str(dto.customerId),
     churchId: church.id,
     name: str(snapCustomer.name),
-    mobile: str(snapCustomer.mobile),
+    mobile: opt(snapCustomer.mobile) ?? null,
     email: opt(snapCustomer.email),
     createdAt: "",
   };

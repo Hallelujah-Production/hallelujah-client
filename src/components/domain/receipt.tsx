@@ -1,4 +1,3 @@
-import { BrandMark } from "@/components/layout/church-mark";
 import { PAYMENT_METHOD_LABEL, type ReceiptView } from "@/lib/types";
 import {
   cn,
@@ -7,6 +6,9 @@ import {
   formatDateTime,
   formatLongDate,
 } from "@/lib/utils";
+
+/** Print-receipt crest only. Do not use on the app chrome or public site. */
+const RECEIPT_LOGO_SRC = "/brand/receipt-logo.jpeg";
 
 const PAYMENT_STATUS_TEXT = {
   PENDING_VERIFICATION: "⚠ Pending verification",
@@ -52,10 +54,12 @@ export function Receipt({
       {/* Church header */}
       <header className="flex flex-nowrap items-start justify-between gap-6 border-b-2 border-primary pb-6">
         <div className="flex min-w-0 flex-1 flex-nowrap items-start gap-4">
-          <BrandMark
-            showName={false}
-            size="lg"
-            className="shrink-0"
+          <img
+            src={RECEIPT_LOGO_SRC}
+            alt=""
+            width={96}
+            height={96}
+            className="h-20 w-20 shrink-0 object-contain print:h-[22mm] print:w-[22mm]"
           />
           <div className="min-w-0">
             <h2 className="font-display text-xl font-bold tracking-tight text-primary [text-wrap:wrap]">
@@ -93,7 +97,7 @@ export function Receipt({
       <div className="mt-6 grid grid-cols-2 gap-6">
         <Block title="Received from">
           <Line label="Name" value={customer.name} strong />
-          <Line label="Mobile" value={customer.mobile} />
+          {customer.mobile ? <Line label="Mobile" value={customer.mobile} /> : null}
           {customer.email ? <Line label="Email" value={customer.email} /> : null}
           {customer.addressLine ? (
             <Line label="Address" value={`${customer.addressLine}${customer.city ? `, ${customer.city}` : ""}`} />
@@ -210,9 +214,6 @@ export function Receipt({
         <p className="mt-0.5 text-sm text-muted-foreground">
           May God bless you and your family.
         </p>
-        <div className="mt-5 flex flex-nowrap justify-center">
-          <BrandMark size="sm" className="flex-nowrap" />
-        </div>
         <p className="mt-3 text-[0.65rem] text-muted-foreground">
           {church.name} · Receipt {receipt.reference} · Issued through Hallelujah · This is
           a computer-generated receipt issued by the parish office.

@@ -14,6 +14,8 @@ export function PreferredTimeField({
   defaultValue,
   onChange,
   error,
+  label = "Preferred time",
+  description = "Optional. Set any hour and minutes, then AM or PM. Leave empty if you have no preference.",
 }: {
   id?: string;
   /** Omit when a hidden input already carries the value (wizard form). */
@@ -22,6 +24,8 @@ export function PreferredTimeField({
   defaultValue?: string;
   onChange?: (next: string) => void;
   error?: string;
+  label?: string;
+  description?: string;
 }) {
   const controlled = typeof onChange === "function";
   const [parts, setParts] = React.useState<ClockParts>(() =>
@@ -43,9 +47,9 @@ export function PreferredTimeField({
   return (
     <Field
       id={id}
-      label="Preferred time"
+      label={label}
       error={error}
-      description="Optional. Set any hour and minutes, then AM or PM. Leave empty if you have no preference."
+      description={description}
     >
       {(aria) => (
         <div className="flex flex-wrap items-center gap-2">

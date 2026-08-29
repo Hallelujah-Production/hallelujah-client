@@ -43,7 +43,10 @@ export interface NavSection {
 export const NAVIGATION: Record<Role, NavSection[]> = {
   CHURCH_ADMIN: [
     {
-      items: [{ label: "Dashboard", href: "/dashboard", icon: "dashboard" }],
+      items: [
+        { label: "Create Intention", href: "/intentions/new", icon: "intentions" },
+        { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+      ],
     },
     {
       label: "Prayer ministry",
@@ -94,7 +97,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
 
   CHURCH_STAFF: [
     {
-      items: [{ label: "Dashboard", href: "/dashboard", icon: "dashboard" }],
+      items: [{ label: "Prayers", href: "/dashboard", icon: "prayer" }],
     },
     {
       label: "My ministry",
@@ -160,14 +163,14 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
 /** Bottom navigation for small screens — the four most-used destinations. */
 export const MOBILE_TABS: Record<Role, NavItem[]> = {
   CHURCH_ADMIN: [
-    { label: "Home", href: "/dashboard", icon: "dashboard" },
+    { label: "Create", href: "/intentions/new", icon: "intentions" },
     { label: "Intentions", href: "/intentions", icon: "intentions", match: ["/intentions"] },
     { label: "Payments", href: "/payments", icon: "payments", match: ["/payments"] },
     { label: "Alerts", href: "/notifications", icon: "bell", badge: "notifications" },
   ],
   CHURCH_STAFF: [
-    { label: "Home", href: "/dashboard", icon: "dashboard" },
-    { label: "Prayers", href: "/my-prayers", icon: "prayer", match: ["/my-prayers"] },
+    { label: "Prayers", href: "/dashboard", icon: "prayer" },
+    { label: "My Prayers", href: "/my-prayers", icon: "prayer", match: ["/my-prayers"] },
     { label: "Upcoming", href: "/upcoming", icon: "calendar" },
     { label: "Alerts", href: "/notifications", icon: "bell", badge: "notifications" },
   ],

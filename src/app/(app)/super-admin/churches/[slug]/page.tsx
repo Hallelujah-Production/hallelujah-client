@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, Mail, MapPin, Phone } from "lucide-react";
 import { PageHeader, TabNav } from "@/components/layout/page-header";
+import { LiveRefresh } from "@/components/data/live-refresh";
 import { StatCard, StatGrid } from "@/components/data/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, DetailList, DetailRow } from "@/components/ui/card";
 import { DataTable, type Column } from "@/components/data/data-table";
@@ -86,6 +87,7 @@ export default async function PlatformChurchPage({ params, searchParams }: PageP
 
   return (
     <div className="space-y-6">
+      <LiveRefresh />
       <PageHeader
         breadcrumb={[
           { label: "Platform", href: "/super-admin" },
