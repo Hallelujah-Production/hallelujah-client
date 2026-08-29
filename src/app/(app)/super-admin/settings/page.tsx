@@ -4,7 +4,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, DetailList, DetailRow } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getPlatformHeadcounts } from "@/lib/services";
 import { PLATFORM_NAME } from "@/lib/brand";
 import { ChangePasswordForm } from "@/app/(app)/settings/change-password-form";
@@ -15,8 +16,8 @@ export const metadata: Metadata = {
 };
 
 export default async function PlatformSettingsPage() {
-  const session = await requireSuperAdmin();
-  const counts = await getPlatformHeadcounts();
+  const [session, counts] = await Promise.all([getSession(), getPlatformHeadcounts()]);
+  const admin = assertSuperAdmin(session);
 
   return (
     <div className="space-y-6">
@@ -57,8 +58,8 @@ export default async function PlatformSettingsPage() {
           </CardHeader>
           <CardContent className="pt-1">
             <DetailList>
-              <DetailRow label="Name">{session.currentUser.name}</DetailRow>
-              <DetailRow label="Email">{session.currentUser.email}</DetailRow>
+              <DetailRow label="Name">{admin.currentUser.name}</DetailRow>
+              <DetailRow label="Email">{admin.currentUser.email}</DetailRow>
               <DetailRow label="Role">Platform Administrator</DetailRow>
               <DetailRow label="Scope">
                 Every church on the platform. All actions are audit-logged.

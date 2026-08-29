@@ -243,6 +243,21 @@ export interface Paginated<T> {
   limit: number;
   total: number;
   totalPages: number;
+  roleTotals?: {
+    total?: number;
+    admins: number;
+    staff: number;
+    superAdmins?: number;
+  };
+  churchTotals?: {
+    total: number;
+    active: number;
+  };
+  paymentStats?: {
+    verifiedCount: number;
+    pendingVerification: number;
+    monthCollectedPaise: number;
+  };
 }
 
 export interface ListQuery {
@@ -344,6 +359,8 @@ export interface ChurchDashboardStats {
   intentionTrend: TrendPoint[];
   prayerTypeSplit: TrendPoint[];
   paymentMethodSplit: TrendPoint[];
+  /** Allotted parishes with intention aggregates. From /reports/dashboard, not /auth/me. */
+  parishes?: Church[];
 }
 
 export interface PlatformDashboardStats {

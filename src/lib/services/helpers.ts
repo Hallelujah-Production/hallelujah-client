@@ -1,6 +1,23 @@
 import "server-only";
 
+import { ApiError } from "@/lib/api/errors";
 import type { Paginated } from "@/lib/types";
+
+/** Super Admin church-detail pages must use /admin/churches/:id/... not tenant cookie routes. */
+export interface ScopedListOptions {
+  forPlatform?: boolean;
+}
+
+export async function ignoreForbidden<T>(promise: Promise<T>): Promise<T | null> {
+  try {
+    return await promise;
+  } catch (error) {
+    if (error instanceof ApiError && (error.isForbidden || error.isUnauthorized)) {
+      return null;
+    }
+    throw error;
+  }
+}
 
 /**
  * Pagination is applied here the way the future API will apply it: the caller

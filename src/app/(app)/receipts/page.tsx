@@ -7,7 +7,8 @@ import { FilterBar } from "@/components/data/filter-bar";
 import { DataTable, type Column } from "@/components/data/data-table";
 import { Pagination } from "@/components/data/pagination";
 import { PaymentStatusBadge } from "@/components/ui/badge";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getReceipts } from "@/lib/services";
 import type { ReceiptView } from "@/lib/types";
 import { first, formatCurrency, formatDate, readNumberParam } from "@/lib/utils";
@@ -22,16 +23,19 @@ export default async function ReceiptsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const params = await searchParams;
 
-  const result = await getReceipts(session.currentChurch.id, {
-    page: readNumberParam(first(params.page), 1),
-    limit: 20,
-    search: first(params.search),
-    from: first(params.from),
-    to: first(params.to),
-  });
+  const [session, result] = await Promise.all([
+    getSession(),
+    getReceipts("", {
+      page: readNumberParam(first(params.page), 1),
+      limit: 20,
+      search: first(params.search),
+      from: first(params.from),
+      to: first(params.to),
+    }),
+  ]);
+  assertChurchAdmin(session);
 
   const columns: Column<ReceiptView>[] = [
     {

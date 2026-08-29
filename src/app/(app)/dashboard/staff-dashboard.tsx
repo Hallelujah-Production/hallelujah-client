@@ -6,6 +6,7 @@ import { PrayerCard } from "@/components/domain/prayer-card";
 import { EmptyState } from "@/components/ui/states";
 import { getStaffIntentions, getStaffStats } from "@/lib/services";
 import type { ChurchSession } from "@/lib/guards";
+import type { IntentionView, Paginated, StaffDashboardStats } from "@/lib/types";
 import { formatLongDate, TODAY } from "@/lib/utils";
 
 /**
@@ -14,14 +15,24 @@ import { formatLongDate, TODAY } from "@/lib/utils";
  * Deliberately narrow: no revenue, no payment queue, no church settings. A
  * prayer staff member needs to know what to pray for today and what is coming.
  */
-export async function StaffDashboard({ session }: { session: ChurchSession }) {
+export async function StaffDashboard({
+  session,
+  stats: statsIn,
+  today: todayIn,
+  upcoming: upcomingIn,
+}: {
+  session: ChurchSession;
+  stats?: StaffDashboardStats;
+  today?: Paginated<IntentionView>;
+  upcoming?: Paginated<IntentionView>;
+}) {
   const church = session.currentChurch;
   const staff = session.currentUser;
 
   const [stats, today, upcoming] = await Promise.all([
-    getStaffStats(church.id, staff.id),
-    getStaffIntentions(church.id, staff.id, "today", { limit: 20 }),
-    getStaffIntentions(church.id, staff.id, "upcoming", { limit: 6 }),
+    statsIn ?? getStaffStats(church.id, staff.id),
+    todayIn ?? getStaffIntentions(church.id, staff.id, "today", { limit: 20 }),
+    upcomingIn ?? getStaffIntentions(church.id, staff.id, "upcoming", { limit: 6 }),
   ]);
 
   const firstName = staff.name.replace(/^(Fr\.|Sr\.|Bro\.)\s/, "").split(" ")[0];

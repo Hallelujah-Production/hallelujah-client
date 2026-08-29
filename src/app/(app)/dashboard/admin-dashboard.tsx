@@ -19,7 +19,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { AssignedChurchCard } from "@/components/layout/workspace-switcher";
 import { getDashboardStats, getIntentions, getPrayerSchedule } from "@/lib/services";
 import type { ChurchSession } from "@/lib/guards";
-import type { IntentionView } from "@/lib/types";
+import type { ChurchDashboardStats, IntentionView, Paginated } from "@/lib/types";
 import { formatCompactCurrency, formatCurrency, formatLongDate, formatTime, TODAY } from "@/lib/utils";
 
 const QUICK_ACTIONS = [
@@ -29,14 +29,26 @@ const QUICK_ACTIONS = [
   { label: "Awaiting verification", href: "/payments?status=PENDING_VERIFICATION", icon: ShieldAlert },
 ];
 
-export async function AdminDashboard({ session }: { session: ChurchSession }) {
+export async function AdminDashboard({
+  session,
+  stats: statsIn,
+  schedule: scheduleIn,
+  awaiting: awaitingIn,
+}: {
+  session: ChurchSession;
+  stats?: ChurchDashboardStats;
+  schedule?: IntentionView[];
+  awaiting?: Paginated<IntentionView>;
+}) {
   const church = session.currentChurch;
 
   const [stats, schedule, awaiting] = await Promise.all([
-    getDashboardStats(church.id),
-    getPrayerSchedule(church.id),
-    getIntentions(church.id, { paymentStatus: "PENDING_VERIFICATION", limit: 5 }),
+    statsIn ?? getDashboardStats(church.id),
+    scheduleIn ?? getPrayerSchedule(church.id),
+    awaitingIn ?? getIntentions(church.id, { paymentStatus: "PENDING_VERIFICATION", limit: 5 }),
   ]);
+
+  const parishes = stats.parishes?.length ? stats.parishes : session.assignedChurches;
 
   const columns: Column<IntentionView>[] = [
     {
@@ -105,7 +117,7 @@ export async function AdminDashboard({ session }: { session: ChurchSession }) {
         }
       />
 
-      {session.assignedChurches.length > 0 ? (
+      {parishes.length > 0 ? (
         <section className="space-y-3">
           <div>
             <h2 className="font-display text-lg font-semibold tracking-tight text-foreground">
@@ -116,7 +128,7 @@ export async function AdminDashboard({ session }: { session: ChurchSession }) {
             </p>
           </div>
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {session.assignedChurches.map((parish) => (
+            {parishes.map((parish) => (
               <li key={parish.id}>
                 <AssignedChurchCard church={parish} active={parish.id === church.id} />
               </li>

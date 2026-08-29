@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, DetailList, DetailRow } from 
 import { StatCard, StatGrid } from "@/components/data/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { ChurchMark } from "@/components/layout/church-mark";
-import { requireChurchStaff } from "@/lib/guards";
+import { assertChurchStaff } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getStaffStats } from "@/lib/services";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { ChangePasswordForm } from "@/app/(app)/settings/change-password-form";
@@ -16,11 +17,10 @@ export const metadata: Metadata = {
 };
 
 export default async function ProfilePage() {
-  const session = await requireChurchStaff();
-  const user = session.currentUser;
-  const church = session.currentChurch;
-
-  const stats = await getStaffStats(church.id, user.id);
+  const [session, stats] = await Promise.all([getSession(), getStaffStats("", "")]);
+  const staffSession = assertChurchStaff(session);
+  const user = staffSession.currentUser;
+  const church = staffSession.currentChurch;
 
   return (
     <div className="space-y-6">

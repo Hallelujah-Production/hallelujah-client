@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Pagination } from "@/components/data/pagination";
 import { PrayerCard } from "@/components/domain/prayer-card";
 import { EmptyState } from "@/components/ui/states";
-import { requireChurchStaff } from "@/lib/guards";
+import { assertChurchStaff } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getStaffIntentions } from "@/lib/services";
 import type { IntentionView } from "@/lib/types";
 import { addDays, first, formatLongDate, readNumberParam, TODAY } from "@/lib/utils";
@@ -19,15 +20,16 @@ export default async function UpcomingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchStaff();
   const params = await searchParams;
 
-  const result = await getStaffIntentions(
-    session.currentChurch.id,
-    session.currentUser.id,
-    "upcoming",
-    { page: readNumberParam(first(params.page), 1), limit: 18 },
-  );
+  const [session, result] = await Promise.all([
+    getSession(),
+    getStaffIntentions("", "", "upcoming", {
+      page: readNumberParam(first(params.page), 1),
+      limit: 18,
+    }),
+  ]);
+  assertChurchStaff(session);
 
   // Group by prayer date so a staff member reads their week, not a flat list.
   const groups = result.data.reduce<Record<string, IntentionView[]>>((acc, intention) => {

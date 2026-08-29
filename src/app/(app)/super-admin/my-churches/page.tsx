@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { MyChurchesRegister } from "@/components/domain/my-churches-register";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getChurchViews, getIntentionRegister } from "@/lib/services";
 import type { IntentionQuery } from "@/lib/types";
 import { first, readNumberParam } from "@/lib/utils";
@@ -15,7 +16,6 @@ export default async function SuperAdminMyChurchesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireSuperAdmin();
   const params = await searchParams;
 
   const query: IntentionQuery = {
@@ -28,10 +28,12 @@ export default async function SuperAdminMyChurchesPage({
     to: first(params.to),
   };
 
-  const [result, churches] = await Promise.all([
+  const [session, result, churches] = await Promise.all([
+    getSession(),
     getIntentionRegister(query),
     getChurchViews({ status: "ACTIVE", limit: 100 }),
   ]);
+  assertSuperAdmin(session);
 
   return (
     <MyChurchesRegister

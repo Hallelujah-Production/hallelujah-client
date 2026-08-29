@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { buildIntentionRegisterCsv } from "@/lib/services";
 import type { IntentionQuery } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  await requireSuperAdmin();
   const { searchParams } = new URL(request.url);
   const query: Omit<IntentionQuery, "page" | "limit"> = {
     search: searchParams.get("search") ?? undefined,
@@ -16,8 +16,10 @@ export async function GET(request: Request) {
     to: searchParams.get("to") ?? undefined,
   };
 
-  const { csv } = await buildIntentionRegisterCsv(query);
-  return new NextResponse(csv, {
+  const [session, built] = await Promise.all([getSession(), buildIntentionRegisterCsv(query)]);
+  assertSuperAdmin(session);
+
+  return new NextResponse(built.csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": 'attachment; filename="my-churches.csv"',

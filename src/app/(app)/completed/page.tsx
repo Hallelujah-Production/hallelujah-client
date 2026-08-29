@@ -6,7 +6,8 @@ import { SearchInput } from "@/components/data/search-input";
 import { Pagination } from "@/components/data/pagination";
 import { DataTable, type Column } from "@/components/data/data-table";
 import { StatCard, StatGrid } from "@/components/data/stat-card";
-import { requireChurchStaff } from "@/lib/guards";
+import { assertChurchStaff } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getStaffIntentions, getStaffStats } from "@/lib/services";
 import type { IntentionView } from "@/lib/types";
 import { first, formatDate, formatDateTime, formatPrayerDuration, readNumberParam } from "@/lib/utils";
@@ -21,17 +22,18 @@ export default async function CompletedPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchStaff();
   const params = await searchParams;
 
-  const [result, stats] = await Promise.all([
-    getStaffIntentions(session.currentChurch.id, session.currentUser.id, "completed", {
+  const [session, result, stats] = await Promise.all([
+    getSession(),
+    getStaffIntentions("", "", "completed", {
       page: readNumberParam(first(params.page), 1),
       limit: 20,
       search: first(params.search),
     }),
-    getStaffStats(session.currentChurch.id, session.currentUser.id),
+    getStaffStats("", ""),
   ]);
+  assertChurchStaff(session);
 
   const columns: Column<IntentionView>[] = [
     {

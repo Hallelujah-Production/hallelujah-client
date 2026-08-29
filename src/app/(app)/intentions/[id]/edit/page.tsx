@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getIntentionById } from "@/lib/services";
 import { IntentionEditForm } from "./intention-edit-form";
 
@@ -15,9 +16,9 @@ export default async function EditIntentionPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await requireChurchAdmin();
   const { id } = await params;
-  const intention = await getIntentionById(session.currentChurch.id, id);
+  const [session, intention] = await Promise.all([getSession(), getIntentionById("", id)]);
+  assertChurchAdmin(session);
   if (!intention) notFound();
 
   const closed = intention.status === "COMPLETED" || intention.status === "CANCELLED";

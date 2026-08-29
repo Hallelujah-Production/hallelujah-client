@@ -4,7 +4,8 @@ import { SearchInput } from "@/components/data/search-input";
 import { Pagination } from "@/components/data/pagination";
 import { PrayerCard } from "@/components/domain/prayer-card";
 import { EmptyState } from "@/components/ui/states";
-import { requireChurchStaff } from "@/lib/guards";
+import { assertChurchStaff } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getStaffIntentions, getStaffStats, type StaffScope } from "@/lib/services";
 import { first, readNumberParam } from "@/lib/utils";
 
@@ -18,7 +19,6 @@ export default async function MyPrayersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchStaff();
   const params = await searchParams;
 
   const scopeParam = first(params.scope);
@@ -27,21 +27,23 @@ export default async function MyPrayersPage({
       ? scopeParam
       : "all";
 
-  const [result, stats] = await Promise.all([
-    getStaffIntentions(session.currentChurch.id, session.currentUser.id, scope, {
+  const [session, result, stats] = await Promise.all([
+    getSession(),
+    getStaffIntentions("", "", scope, {
       page: readNumberParam(first(params.page), 1),
       limit: 20,
       search: first(params.search),
     }),
-    getStaffStats(session.currentChurch.id, session.currentUser.id),
+    getStaffStats("", ""),
   ]);
+  const staffSession = assertChurchStaff(session);
 
   return (
     <div className="space-y-6">
       <PageHeader
         breadcrumb={[{ label: "Dashboard", href: "/dashboard" }, { label: "My Prayers" }]}
         title="My prayers"
-        description={`Intentions assigned to you at ${session.currentChurch.name}.`}
+        description={`Intentions assigned to you at ${staffSession.currentChurch.name}.`}
       />
 
       <TabNav

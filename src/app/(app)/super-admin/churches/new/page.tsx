@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { CreateChurchForm } from "./create-church-form";
 import { getUsers } from "@/lib/services";
 
@@ -10,8 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default async function NewChurchPage() {
-  await requireSuperAdmin();
-  const admins = await getUsers({ role: "CHURCH_ADMIN", status: "ACTIVE", limit: 100 });
+  const [session, admins] = await Promise.all([
+    getSession(),
+    getUsers({ role: "CHURCH_ADMIN", status: "ACTIVE", limit: 100 }),
+  ]);
+  assertSuperAdmin(session);
 
   return (
     <div className="space-y-6">

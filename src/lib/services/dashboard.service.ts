@@ -1,6 +1,7 @@
 import "server-only";
 
-import { apiGet, apiGetPaginated } from "@/lib/api/client";
+import { apiGet } from "@/lib/api/client";
+import { mapChurch } from "@/lib/api/adapters";
 import { paiseToRupees } from "@/lib/api/money";
 import type {
   ChurchDashboardStats,
@@ -10,6 +11,7 @@ import type {
 } from "@/lib/types";
 import { PAYMENT_METHOD_LABEL } from "@/lib/types";
 import { dayLabel } from "@/lib/utils";
+import { getUsers } from "./user.service";
 
 interface ReportSummary {
   intentions: {
@@ -64,6 +66,7 @@ export async function getDashboardStats(_churchId: string): Promise<ChurchDashbo
     month: ReportSummary;
     daily: { data: DailyRow[] };
     prayerTypes: { data: PrayerTypeRow[] };
+    parishes?: Record<string, unknown>[];
   }>("/reports/dashboard");
   const today = bundle.today;
   const month = bundle.month;
@@ -109,6 +112,7 @@ export async function getDashboardStats(_churchId: string): Promise<ChurchDashbo
     intentionTrend,
     prayerTypeSplit,
     paymentMethodSplit,
+    parishes: (bundle.parishes ?? []).map((row) => mapChurch(row)),
   };
 }
 
@@ -135,32 +139,19 @@ function emptyPlatformStats(
   };
 }
 
-/** Cheap counts for settings / empty-install dashboard. Avoids 9 report RTTs. */
+/** Cheap counts for settings / empty-install dashboard. One users list carries role + church totals. */
 export async function getPlatformHeadcounts(): Promise<{
   totalChurches: number;
   activeChurches: number;
   totalUsers: number;
   superAdmins: number;
 }> {
-  const [churches, active, users, supers] = await Promise.all([
-    apiGetPaginated<Record<string, unknown>>("/admin/churches", {
-      query: { limit: 1, countsOnly: true },
-    }),
-    apiGetPaginated<Record<string, unknown>>("/admin/churches", {
-      query: { status: "ACTIVE", limit: 1, countsOnly: true },
-    }),
-    apiGetPaginated<Record<string, unknown>>("/admin/users", {
-      query: { limit: 1, countsOnly: true },
-    }),
-    apiGetPaginated<Record<string, unknown>>("/admin/users", {
-      query: { role: "SUPER_ADMIN", limit: 1, countsOnly: true },
-    }),
-  ]);
+  const users = await getUsers({ limit: 1 });
   return {
-    totalChurches: churches.total,
-    activeChurches: active.total,
-    totalUsers: users.total,
-    superAdmins: supers.total,
+    totalChurches: users.churchTotals?.total ?? 0,
+    activeChurches: users.churchTotals?.active ?? 0,
+    totalUsers: users.roleTotals?.total ?? users.total,
+    superAdmins: users.roleTotals?.superAdmins ?? 0,
   };
 }
 

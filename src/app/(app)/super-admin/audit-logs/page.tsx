@@ -6,7 +6,8 @@ import { FilterBar } from "@/components/data/filter-bar";
 import { DataTable, type Column } from "@/components/data/data-table";
 import { Pagination } from "@/components/data/pagination";
 import { Badge } from "@/components/ui/badge";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getAuditActions, getAuditLogs, getChurchViews } from "@/lib/services";
 import type { AuditLog } from "@/lib/types";
 import { first, formatDateTime, readNumberParam, titleCase } from "@/lib/utils";
@@ -21,10 +22,10 @@ export default async function AuditLogsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireSuperAdmin();
   const params = await searchParams;
 
-  const [result, actions, churches] = await Promise.all([
+  const [session, result, actions, churches] = await Promise.all([
+    getSession(),
     getAuditLogs({
       page: readNumberParam(first(params.page), 1),
       limit: 20,
@@ -35,6 +36,7 @@ export default async function AuditLogsPage({
     getAuditActions(),
     getChurchViews({ limit: 50 }),
   ]);
+  assertSuperAdmin(session);
 
   const churchName = (id: string | null) =>
     id ? (churches.data.find((c) => c.id === id)?.name ?? "—") : "Platform";

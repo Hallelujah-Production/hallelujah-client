@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, DetailList, DetailRow } from 
 import { MethodBadge, PaymentStatusBadge, StatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { ImagePreview } from "@/components/ui/image-preview";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getPaymentById } from "@/lib/services";
 import { formatCurrency, formatDateTime, formatFileSize, formatLongDate } from "@/lib/utils";
 import { VerificationActions } from "./verification-actions";
@@ -22,10 +23,10 @@ export default async function PaymentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await requireChurchAdmin();
   const { id } = await params;
 
-  const payment = await getPaymentById(session.currentChurch.id, id);
+  const [session, payment] = await Promise.all([getSession(), getPaymentById("", id)]);
+  const admin = assertChurchAdmin(session);
   if (!payment) notFound();
 
   const isCash = payment.method === "CASH";
@@ -271,7 +272,7 @@ export default async function PaymentDetailPage({
               Offline payment
             </h2>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              This offering was paid straight to {session.currentChurch.name}. Hallelujah holds
+              This offering was paid straight to {admin.currentChurch.name}. Hallelujah holds
               only the record of it — there is no gateway, no settlement and no refund flow
               in this platform.
             </p>

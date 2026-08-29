@@ -7,15 +7,12 @@ export async function loadShellBadges(): Promise<{
   notifications: number;
   paymentsPending: number;
 }> {
+  const unreadPromise = getUnreadCount();
   const session = await getSession();
   if (!session) return { notifications: 0, paymentsPending: 0 };
 
   const [notifications, paymentsPending] = await Promise.all([
-    getUnreadCount({
-      role: session.currentRole,
-      userId: session.currentUser.id,
-      churchId: session.currentChurch?.id ?? null,
-    }),
+    unreadPromise,
     session.currentRole === "CHURCH_ADMIN" && session.currentChurch
       ? getPendingVerificationCount(session.currentChurch.id)
       : Promise.resolve(0),

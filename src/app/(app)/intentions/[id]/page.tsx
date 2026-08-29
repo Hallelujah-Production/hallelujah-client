@@ -9,7 +9,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { ImagePreview } from "@/components/ui/image-preview";
 import { PrayerElapsedTimer } from "@/components/domain/prayer-elapsed-timer";
 import { PrayerIcon } from "@/components/domain/prayer-icon";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getAssignableStaff, getIntentionById } from "@/lib/services";
 import {
   formatCurrency,
@@ -34,13 +35,14 @@ export default async function IntentionDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const [{ id }, query] = await Promise.all([params, searchParams]);
 
-  const [intention, allStaff] = await Promise.all([
-    getIntentionById(session.currentChurch.id, id),
-    getAssignableStaff(session.currentChurch.id),
+  const [session, intention, allStaff] = await Promise.all([
+    getSession(),
+    getIntentionById("", id),
+    getAssignableStaff(),
   ]);
+  assertChurchAdmin(session);
 
   if (!intention) notFound();
 

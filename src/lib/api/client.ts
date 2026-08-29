@@ -23,7 +23,15 @@ export interface ApiSuccess<T> {
   success: true;
   data: T;
   message?: string;
-  meta?: { page: number; limit: number; total: number; totalPages: number };
+  meta?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    roleTotals?: Paginated<unknown>["roleTotals"];
+    churchTotals?: Paginated<unknown>["churchTotals"];
+    paymentStats?: Paginated<unknown>["paymentStats"];
+  };
 }
 
 export interface ApiFailure {
@@ -259,6 +267,9 @@ export async function apiGetPaginated<T>(
     limit: meta?.limit ?? 20,
     total: meta?.total ?? 0,
     totalPages: meta?.totalPages ?? 1,
+    roleTotals: meta?.roleTotals,
+    churchTotals: meta?.churchTotals,
+    paymentStats: meta?.paymentStats,
   };
 }
 

@@ -5,7 +5,8 @@ import { PAYMENT_METHOD_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/components/ui/
 import { ReportView } from "@/components/domain/report-view";
 import { ReportRetry } from "@/components/domain/report-retry";
 import { PrintButton } from "@/components/domain/print-button";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import {
   getChurchViews,
   getPrayerTypes,
@@ -32,7 +33,6 @@ export default async function PlatformReportsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireSuperAdmin();
   const params = await searchParams;
 
   const presetParam = first(params.preset) as ReportPreset | undefined;
@@ -46,29 +46,28 @@ export default async function PlatformReportsPage({
     preset === "custom" ? reportRangeMessage(first(params.from), first(params.to)) : null;
   const churchId = first(params.church);
 
-  const [prayerTypes, churches] = await Promise.all([
+  const reportPromise =
+    rangeError
+      ? Promise.resolve(null)
+      : getReport({
+          from: range.from,
+          to: range.to,
+          churchId: churchId && churchId !== "ALL" ? churchId : undefined,
+          prayerTypeId: first(params.type),
+          method: first(params.method),
+          paymentStatus: first(params.payment),
+          preset,
+          platform: true,
+        }).catch(() => null);
+
+  const [session, prayerTypes, churches, report] = await Promise.all([
+    getSession(),
     getPrayerTypes(),
     getChurchViews({ limit: 50 }),
+    reportPromise,
   ]);
-
-  let report = null;
-  let loadFailed = false;
-  if (!rangeError) {
-    try {
-      report = await getReport({
-        from: range.from,
-        to: range.to,
-        churchId: churchId && churchId !== "ALL" ? churchId : undefined,
-        prayerTypeId: first(params.type),
-        method: first(params.method),
-        paymentStatus: first(params.payment),
-        preset,
-        platform: true,
-      });
-    } catch {
-      loadFailed = true;
-    }
-  }
+  assertSuperAdmin(session);
+  const loadFailed = !rangeError && !report;
 
   const selectedChurch = churches.data.find((c) => c.id === churchId);
 

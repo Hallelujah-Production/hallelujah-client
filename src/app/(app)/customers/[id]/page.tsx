@@ -8,7 +8,8 @@ import { StatCard, StatGrid } from "@/components/data/stat-card";
 import { MethodBadge, PaymentStatusBadge, StatusBadge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/data/data-table";
 import { EmptyState } from "@/components/ui/states";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import {
   getCustomerById,
   getCustomerIntentions,
@@ -28,18 +29,17 @@ export default async function CustomerDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await requireChurchAdmin();
   const { id } = await params;
-  const churchId = session.currentChurch.id;
 
-  const customer = await getCustomerById(churchId, id);
-  if (!customer) notFound();
-
-  const [intentions, payments, receipts] = await Promise.all([
-    getCustomerIntentions(churchId, id),
-    getCustomerPayments(churchId, id),
-    getCustomerReceipts(churchId, id),
+  const [session, customer, intentions, payments, receipts] = await Promise.all([
+    getSession(),
+    getCustomerById("", id),
+    getCustomerIntentions("", id),
+    getCustomerPayments("", id),
+    getCustomerReceipts("", id),
   ]);
+  const admin = assertChurchAdmin(session);
+  if (!customer) notFound();
 
   const intentionColumns: Column<IntentionView>[] = [
     { key: "reference", header: "Receipt", cell: (r) => <span className="tabular-nums">{r.reference}</span> },
@@ -111,7 +111,7 @@ export default async function CustomerDetailPage({
           { label: customer.name },
         ]}
         title={customer.name}
-        description={`With ${session.currentChurch.name} since ${formatDate(customer.createdAt)}`}
+        description={`With ${admin.currentChurch.name} since ${formatDate(customer.createdAt)}`}
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_20rem] xl:items-start">

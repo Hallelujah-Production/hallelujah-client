@@ -5,7 +5,8 @@ import { PAYMENT_METHOD_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/components/ui/
 import { ReportView } from "@/components/domain/report-view";
 import { ReportRetry } from "@/components/domain/report-retry";
 import { PrintButton } from "@/components/domain/print-button";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getPrayerTypes, getReport, resolveRange, type ReportPreset } from "@/lib/services";
 import { first, formatDate, reportRangeMessage } from "@/lib/utils";
 
@@ -26,7 +27,6 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const params = await searchParams;
 
   const presetParam = first(params.preset) as ReportPreset | undefined;
@@ -39,24 +39,25 @@ export default async function ReportsPage({
   const rangeError =
     preset === "custom" ? reportRangeMessage(first(params.from), first(params.to)) : null;
 
-  const prayerTypes = await getPrayerTypes();
-  let report = null;
-  let loadFailed = false;
-  if (!rangeError) {
-    try {
-      report = await getReport({
-        from: range.from,
-        to: range.to,
-        churchId: session.currentChurch.id,
-        prayerTypeId: first(params.type),
-        method: first(params.method),
-        paymentStatus: first(params.payment),
-        preset,
-      });
-    } catch {
-      loadFailed = true;
-    }
-  }
+  const reportPromise =
+    rangeError
+      ? Promise.resolve(null)
+      : getReport({
+          from: range.from,
+          to: range.to,
+          prayerTypeId: first(params.type),
+          method: first(params.method),
+          paymentStatus: first(params.payment),
+          preset,
+        }).catch(() => null);
+
+  const [session, prayerTypes, report] = await Promise.all([
+    getSession(),
+    getPrayerTypes(),
+    reportPromise,
+  ]);
+  const admin = assertChurchAdmin(session);
+  const loadFailed = !rangeError && !report;
 
   const buildHref = (value: ReportPreset) => {
     const next = new URLSearchParams();
@@ -76,7 +77,7 @@ export default async function ReportsPage({
       <PageHeader
         breadcrumb={[{ label: "Dashboard", href: "/dashboard" }, { label: "Reports" }]}
         title="Reports"
-        description={`${range.label} · ${formatDate(range.from)} to ${formatDate(range.to)} · ${session.currentChurch.name}`}
+        description={`${range.label} · ${formatDate(range.from)} to ${formatDate(range.to)} · ${admin.currentChurch.name}`}
         actions={<PrintButton size="sm" variant="outline" label="Print report" />}
       />
 

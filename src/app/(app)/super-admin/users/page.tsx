@@ -9,8 +9,9 @@ import { Pagination } from "@/components/data/pagination";
 import { StatCard, StatGrid } from "@/components/data/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { requireSuperAdmin } from "@/lib/guards";
-import { getChurchViews, getUserCounts, getUsers } from "@/lib/services";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
+import { getChurchViews, getUsers } from "@/lib/services";
 import type { Role, UserView } from "@/lib/types";
 import { first, formatDate, readNumberParam } from "@/lib/utils";
 import { UserAccountActions } from "./user-account-actions";
@@ -31,7 +32,6 @@ export default async function SuperAdminUsersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireSuperAdmin();
   const params = await searchParams;
 
   const roleParam = first(params.role);
@@ -43,7 +43,8 @@ export default async function SuperAdminUsersPage({
   const statusParam = first(params.status);
   const status = statusParam === "ACTIVE" || statusParam === "INACTIVE" ? statusParam : "ALL";
 
-  const [result, counts, churches] = await Promise.all([
+  const [session, result, churches] = await Promise.all([
+    getSession(),
     getUsers({
       page: readNumberParam(first(params.page), 1),
       limit: 20,
@@ -52,9 +53,15 @@ export default async function SuperAdminUsersPage({
       status,
       churchId: first(params.church) ?? "ALL",
     }),
-    getUserCounts(),
     getChurchViews({ limit: 50 }),
   ]);
+  const admin = assertSuperAdmin(session);
+  const counts = {
+    total: result.roleTotals?.total ?? result.total,
+    admins: result.roleTotals?.admins ?? 0,
+    staff: result.roleTotals?.staff ?? 0,
+    superAdmins: result.roleTotals?.superAdmins ?? 0,
+  };
 
   const columns: Column<UserView>[] = [
     {
@@ -147,7 +154,7 @@ export default async function SuperAdminUsersPage({
           userEmail={row.email}
           isActive={row.isActive}
           invitationPending={row.invitationPending}
-          isSelf={row.id === session.currentUser.id}
+          isSelf={row.id === admin.currentUser.id}
         />
       ),
     },
@@ -238,7 +245,7 @@ export default async function SuperAdminUsersPage({
                 userEmail={row.email}
                 isActive={row.isActive}
                 invitationPending={row.invitationPending}
-                isSelf={row.id === session.currentUser.id}
+                isSelf={row.id === admin.currentUser.id}
               />
             </div>
           </div>

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { PrayerIntentionForm } from "@/components/domain/prayer-intention-form";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getAssignableStaff, getOfferedPrayerTypes } from "@/lib/services";
 
 export const metadata: Metadata = {
@@ -10,11 +11,12 @@ export const metadata: Metadata = {
 };
 
 export default async function NewIntentionPage() {
-  const session = await requireChurchAdmin();
-  const [prayerTypes, assignableStaff] = await Promise.all([
+  const [session, prayerTypes, assignableStaff] = await Promise.all([
+    getSession(),
     getOfferedPrayerTypes(),
     getAssignableStaff(),
   ]);
+  const admin = assertChurchAdmin(session);
 
   return (
     <div className="space-y-6">
@@ -30,8 +32,8 @@ export default async function NewIntentionPage() {
 
       <div className="rounded-lg border border-border bg-card p-5 shadow-sm sm:p-7">
         <PrayerIntentionForm
-          church={session.currentChurch}
-          assignedChurches={session.assignedChurches}
+          church={admin.currentChurch}
+          assignedChurches={admin.assignedChurches}
           prayerTypes={prayerTypes}
           assignableStaff={assignableStaff}
           mode="staff"

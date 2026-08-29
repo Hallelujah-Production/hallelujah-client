@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
-import { requireChurchStaff } from "@/lib/guards";
+import { assertChurchStaff } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getStaffIntentionById } from "@/lib/services";
 import type { IntentionView } from "@/lib/types";
 import { PrayerElapsedTimer } from "@/components/domain/prayer-elapsed-timer";
@@ -30,14 +31,10 @@ export default async function StaffPrayerTicketPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await requireChurchStaff();
   const { id } = await params;
 
-  const intention = await getStaffIntentionById(
-    session.currentChurch.id,
-    session.currentUser.id,
-    id,
-  );
+  const [session, intention] = await Promise.all([getSession(), getStaffIntentionById("", "", id)]);
+  const staffSession = assertChurchStaff(session);
   if (!intention) notFound();
 
   const completed = intention.status === "COMPLETED";
@@ -131,8 +128,8 @@ export default async function StaffPrayerTicketPage({
               </p>
               <p className="mt-0.5 text-muted-foreground">
                 Completed {formatDateTime(intention.completedAt)}
-                {intention.assignedStaff?.name || session.currentUser.name
-                  ? ` · ${intention.assignedStaff?.name ?? session.currentUser.name}`
+                {intention.assignedStaff?.name || staffSession.currentUser.name
+                  ? ` · ${intention.assignedStaff?.name ?? staffSession.currentUser.name}`
                   : null}
               </p>
             </div>

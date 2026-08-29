@@ -9,7 +9,8 @@ import { Pagination } from "@/components/data/pagination";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { ChurchMark } from "@/components/layout/church-mark";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getChurchViews } from "@/lib/services";
 import type { ChurchView } from "@/lib/types";
 import { first, formatCompactCurrency, formatDate, readNumberParam } from "@/lib/utils";
@@ -26,19 +27,22 @@ export default async function SuperAdminChurchesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireSuperAdmin();
   const params = await searchParams;
 
   const statusParam = first(params.status);
   const status =
     statusParam === "ACTIVE" || statusParam === "INACTIVE" ? statusParam : "ALL";
 
-  const result = await getChurchViews({
-    page: readNumberParam(first(params.page), 1),
-    limit: 20,
-    search: first(params.search),
-    status,
-  });
+  const [session, result] = await Promise.all([
+    getSession(),
+    getChurchViews({
+      page: readNumberParam(first(params.page), 1),
+      limit: 20,
+      search: first(params.search),
+      status,
+    }),
+  ]);
+  assertSuperAdmin(session);
 
   const columns: Column<ChurchView>[] = [
     {

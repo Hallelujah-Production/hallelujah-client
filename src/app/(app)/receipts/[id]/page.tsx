@@ -6,7 +6,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { Receipt } from "@/components/domain/receipt";
 import { PrintButton } from "@/components/domain/print-button";
 import { AutoPrint } from "@/components/domain/auto-print";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getReceipt } from "@/lib/services";
 
 export const metadata: Metadata = {
@@ -21,10 +22,10 @@ export default async function ReceiptDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const [{ id }, query] = await Promise.all([params, searchParams]);
 
-  const receipt = await getReceipt(session.currentChurch.id, id);
+  const [session, receipt] = await Promise.all([getSession(), getReceipt("", id)]);
+  assertChurchAdmin(session);
   if (!receipt) notFound();
 
   return (

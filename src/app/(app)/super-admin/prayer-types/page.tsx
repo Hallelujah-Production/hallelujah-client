@@ -5,7 +5,8 @@ import { StatCard, StatGrid } from "@/components/data/stat-card";
 import { DataTable, type Column } from "@/components/data/data-table";
 import { Badge } from "@/components/ui/badge";
 import { PrayerIcon } from "@/components/domain/prayer-icon";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getPrayerTypes, getPrayerTypeUsage } from "@/lib/services";
 import type { PrayerType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -17,9 +18,12 @@ export const metadata: Metadata = {
 };
 
 export default async function PrayerTypesPage() {
-  await requireSuperAdmin();
-
-  const [types, usage] = await Promise.all([getPrayerTypes(true), getPrayerTypeUsage()]);
+  const [session, types, usage] = await Promise.all([
+    getSession(),
+    getPrayerTypes(true),
+    getPrayerTypeUsage(),
+  ]);
+  assertSuperAdmin(session);
   const totalUse = Object.values(usage).reduce((a, b) => a + b, 0);
 
   const columns: Column<PrayerType>[] = [

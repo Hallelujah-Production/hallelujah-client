@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChurchMark } from "@/components/layout/church-mark";
 import { PrayerIcon } from "@/components/domain/prayer-icon";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getChurchTeam, getOfferedPrayerTypes, getOwnChurch, getPrayerTypeUsage } from "@/lib/services";
 import { first, formatCurrency } from "@/lib/utils";
 import { ChurchProfileForm } from "./church-profile-form";
@@ -30,17 +31,28 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const params = await searchParams;
   const section = first(params.section) ?? "profile";
-  const church = session.currentChurch;
 
-  const [prayerTypes, usage, team, ownChurch] = await Promise.all([
-    getOfferedPrayerTypes(),
-    getPrayerTypeUsage(),
-    getChurchTeam(church.id, { limit: 60 }),
-    getOwnChurch(),
+  const sessionPromise = getSession();
+  const profilePromise = section === "profile" ? getOwnChurch() : Promise.resolve(null);
+  const typesPromise =
+    section === "prayer-types"
+      ? Promise.all([getOfferedPrayerTypes(), getPrayerTypeUsage()])
+      : Promise.resolve([[], {}] as const);
+  const teamPromise =
+    section === "staff" ? getChurchTeam("", { limit: 60 }) : Promise.resolve(null);
+
+  const [session, ownChurch, typesBundle, team] = await Promise.all([
+    sessionPromise,
+    profilePromise,
+    typesPromise,
+    teamPromise,
   ]);
+  const admin = assertChurchAdmin(session);
+  const church = admin.currentChurch;
+  const prayerTypes = Array.isArray(typesBundle[0]) ? typesBundle[0] : [];
+  const usage: Record<string, number> = { ...(typesBundle[1] as Record<string, number>) };
   const profileChurch = ownChurch ?? church;
 
   return (
@@ -247,19 +259,19 @@ export default async function SettingsPage({
                 <div className="rounded-md border border-border bg-muted/40 p-4">
                   <dt className="text-xs text-muted-foreground">Church admins</dt>
                   <dd className="mt-1 font-display text-xl font-semibold text-foreground">
-                    {team.data.filter((m) => m.role === "CHURCH_ADMIN").length}
+                    {team?.roleTotals?.admins ?? team?.data.filter((m) => m.role === "CHURCH_ADMIN").length ?? 0}
                   </dd>
                 </div>
                 <div className="rounded-md border border-border bg-muted/40 p-4">
                   <dt className="text-xs text-muted-foreground">Prayer staff</dt>
                   <dd className="mt-1 font-display text-xl font-semibold text-foreground">
-                    {team.data.filter((m) => m.role === "CHURCH_STAFF").length}
+                    {team?.roleTotals?.staff ?? team?.data.filter((m) => m.role === "CHURCH_STAFF").length ?? 0}
                   </dd>
                 </div>
                 <div className="rounded-md border border-border bg-muted/40 p-4">
                   <dt className="text-xs text-muted-foreground">Active</dt>
                   <dd className="mt-1 font-display text-xl font-semibold text-foreground">
-                    {team.data.filter((m) => m.isActive).length}
+                    {team?.data.filter((m) => m.isActive).length ?? 0}
                   </dd>
                 </div>
               </dl>

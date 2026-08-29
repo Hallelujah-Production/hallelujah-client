@@ -57,18 +57,47 @@ export async function submitIntentionAction(
   };
 }
 
-async function requireChurchActor(roles: ("CHURCH_ADMIN" | "CHURCH_STAFF")[]) {
-  const session = await getSession();
-  if (!session?.currentChurch) return null;
-  if (!roles.includes(session.currentRole as "CHURCH_ADMIN" | "CHURCH_STAFF")) return null;
-  return { churchId: session.currentChurch.id, userId: session.currentUser.id };
-}
-
 export interface ActionState {
   status: "idle" | "error" | "success";
   message?: string;
   startedAt?: string;
   completedAt?: string;
+}
+
+function actionError(error: unknown, fallback: string): ActionState {
+  if (error instanceof ApiError && (error.isUnauthorized || error.isForbidden)) {
+    return { status: "error", message: fallback };
+  }
+  if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
+  throw error;
+}
+
+export async function assignIntentionAction(
+  intentionId: string,
+  staffUserId: string,
+): Promise<ActionState> {
+  try {
+    const result = await assignIntention("", intentionId, staffUserId, "");
+    if (!result) {
+      return {
+        status: "error",
+        message: "Switch to the church this intention belongs to, then assign prayer staff from that parish.",
+      };
+    }
+    revalidatePath(`/intentions/${intentionId}`);
+    revalidatePath("/intentions");
+    revalidatePath("/dashboard");
+    revalidatePath("/my-prayers");
+    revalidatePath("/upcoming");
+    revalidatePath("/completed");
+    return { status: "success", message: `Assigned to ${result.assignedStaff?.name}.` };
+  } catch (error) {
+    if (error instanceof ApiError && (error.isUnauthorized || error.isForbidden)) {
+      return { status: "error", message: "You are not able to assign this prayer." };
+    }
+    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
+    throw error;
+  }
 }
 
 export async function createIntentionAction(
@@ -149,56 +178,22 @@ export async function createIntentionAction(
   };
 }
 
-export async function assignIntentionAction(
-  intentionId: string,
-  staffUserId: string,
-): Promise<ActionState> {
-  const actor = await requireChurchActor(["CHURCH_ADMIN"]);
-  if (!actor) return { status: "error", message: "You are not able to assign this prayer." };
-
-  try {
-    const result = await assignIntention(actor.churchId, intentionId, staffUserId, actor.userId);
-    if (!result) {
-      return {
-        status: "error",
-        message: "Switch to the church this intention belongs to, then assign prayer staff from that parish.",
-      };
-    }
-    revalidatePath(`/intentions/${intentionId}`);
-    revalidatePath("/intentions");
-    revalidatePath("/dashboard");
-    revalidatePath("/my-prayers");
-    revalidatePath("/upcoming");
-    revalidatePath("/completed");
-    return { status: "success", message: `Assigned to ${result.assignedStaff?.name}.` };
-  } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
-  }
-}
-
 export async function startIntentionAction(intentionId: string): Promise<ActionState> {
-  const actor = await requireChurchActor(["CHURCH_ADMIN", "CHURCH_STAFF"]);
-  if (!actor) return { status: "error", message: "You are not able to start this prayer." };
   try {
-    const result = await startIntention(actor.churchId, intentionId);
+    const result = await startIntention("", intentionId);
     if (!result) return { status: "error", message: "That prayer intention could not be found." };
     revalidatePath(`/intentions/${intentionId}`);
     revalidatePath(`/my-prayers/${intentionId}`);
     revalidatePath("/my-prayers");
     return { status: "success", message: "Prayer started." };
   } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
+    return actionError(error, "You are not able to start this prayer.");
   }
 }
 
 export async function completeIntentionAction(intentionId: string): Promise<ActionState> {
-  const actor = await requireChurchActor(["CHURCH_ADMIN", "CHURCH_STAFF"]);
-  if (!actor) return { status: "error", message: "You are not able to complete this prayer." };
-
   try {
-    const result = await completeIntention(actor.churchId, intentionId, actor.userId);
+    const result = await completeIntention("", intentionId, "");
     if (!result) return { status: "error", message: "That prayer intention could not be found." };
     revalidatePath(`/intentions/${intentionId}`);
     revalidatePath(`/my-prayers/${intentionId}`);
@@ -215,8 +210,7 @@ export async function completeIntentionAction(intentionId: string): Promise<Acti
       completedAt: result.completedAt,
     };
   } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
+    return actionError(error, "You are not able to complete this prayer.");
   }
 }
 
@@ -224,19 +218,15 @@ export async function cancelIntentionAction(
   intentionId: string,
   reason: string,
 ): Promise<ActionState> {
-  const actor = await requireChurchActor(["CHURCH_ADMIN"]);
-  if (!actor) return { status: "error", message: "You are not able to cancel this intention." };
-
   try {
-    const result = await cancelIntention(actor.churchId, intentionId, reason);
+    const result = await cancelIntention("", intentionId, reason);
     if (!result) return { status: "error", message: "That prayer intention could not be found." };
     revalidatePath(`/intentions/${intentionId}`);
     revalidatePath("/intentions");
     revalidatePath("/dashboard");
     return { status: "success", message: "Intention cancelled." };
   } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
+    return actionError(error, "You are not able to cancel this intention.");
   }
 }
 
@@ -244,11 +234,8 @@ export async function updateIntentionAction(
   intentionId: string,
   formData: FormData,
 ): Promise<ActionState> {
-  const actor = await requireChurchActor(["CHURCH_ADMIN"]);
-  if (!actor) return { status: "error", message: "You are not able to update this intention." };
-
   try {
-    const result = await updateIntention(actor.churchId, intentionId, {
+    const result = await updateIntention("", intentionId, {
       prayerFor: String(formData.get("prayerFor") ?? ""),
       prayerDate: String(formData.get("prayerDate") ?? ""),
       preferredTime: String(formData.get("preferredTime") ?? "") || null,
@@ -261,17 +248,13 @@ export async function updateIntentionAction(
     revalidatePath("/dashboard");
     return { status: "success", message: "Intention updated." };
   } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
+    return actionError(error, "You are not able to update this intention.");
   }
 }
 
 export async function deleteIntentionAction(intentionId: string): Promise<ActionState> {
-  const actor = await requireChurchActor(["CHURCH_ADMIN"]);
-  if (!actor) return { status: "error", message: "You are not able to delete this intention." };
-
   try {
-    const ok = await deleteIntention(actor.churchId, intentionId);
+    const ok = await deleteIntention("", intentionId);
     if (!ok) return { status: "error", message: "That prayer intention could not be found." };
     revalidatePath("/intentions");
     revalidatePath("/dashboard");
@@ -281,18 +264,14 @@ export async function deleteIntentionAction(intentionId: string): Promise<Action
     revalidatePath("/my-prayers");
     return { status: "success", message: "Intention deleted." };
   } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
+    return actionError(error, "You are not able to delete this intention.");
   }
 }
 
 export async function verifyPaymentAction(paymentId: string): Promise<ActionState> {
-  const actor = await requireChurchActor(["CHURCH_ADMIN"]);
-  if (!actor) return { status: "error", message: "Only a church administrator can verify payments." };
-
   try {
     const { verifyPayment } = await import("@/lib/services");
-    const result = await verifyPayment(actor.churchId, paymentId, actor.userId);
+    const result = await verifyPayment("", paymentId, "");
     if (!result) return { status: "error", message: "That payment could not be found." };
     revalidatePath(`/payments/${paymentId}`);
     revalidatePath("/payments");
@@ -302,8 +281,7 @@ export async function verifyPaymentAction(paymentId: string): Promise<ActionStat
     revalidatePath("/receipts");
     return { status: "success", message: "Payment verified. An official receipt has been issued." };
   } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
+    return actionError(error, "Only a church administrator can verify payments.");
   }
 }
 
@@ -311,12 +289,9 @@ export async function rejectPaymentAction(
   paymentId: string,
   reason: string,
 ): Promise<ActionState> {
-  const actor = await requireChurchActor(["CHURCH_ADMIN"]);
-  if (!actor) return { status: "error", message: "Only a church administrator can reject payments." };
-
   try {
     const { rejectPayment } = await import("@/lib/services");
-    const result = await rejectPayment(actor.churchId, paymentId, actor.userId, reason);
+    const result = await rejectPayment("", paymentId, "", reason);
     if (!result) return { status: "error", message: "That payment could not be found." };
     revalidatePath(`/payments/${paymentId}`);
     revalidatePath("/payments");
@@ -325,7 +300,6 @@ export async function rejectPaymentAction(
     revalidatePath("/dashboard");
     return { status: "success", message: "Payment rejected." };
   } catch (error) {
-    if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
-    throw error;
+    return actionError(error, "Only a church administrator can reject payments.");
   }
 }

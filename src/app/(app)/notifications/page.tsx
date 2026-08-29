@@ -4,7 +4,8 @@ import { PageHeader, TabNav } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/states";
 import { Pagination } from "@/components/data/pagination";
 import { MarkAllReadButton, NotificationItem } from "@/components/domain/notification-item";
-import { requireAuth } from "@/lib/guards";
+import { assertAuth } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getNotifications, getUnreadCount, groupNotifications } from "@/lib/services";
 import { addDays, first, readNumberParam, TODAY } from "@/lib/utils";
 
@@ -18,21 +19,18 @@ export default async function NotificationsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireAuth();
   const params = await searchParams;
   const filter = first(params.filter) === "unread" ? "unread" : "all";
   const page = readNumberParam(first(params.page), 1);
 
-  const scope = {
-    role: session.currentRole,
-    userId: session.currentUser.id,
-    churchId: session.currentChurch?.id ?? null,
-  };
+  const dummyScope = { role: "CHURCH_STAFF" as const, userId: "", churchId: null };
 
-  const [result, unreadCount] = await Promise.all([
-    getNotifications(scope, { page, limit: 20 }),
-    getUnreadCount(scope),
+  const [session, result, unreadCount] = await Promise.all([
+    getSession(),
+    getNotifications(dummyScope, { page, limit: 20 }),
+    getUnreadCount(),
   ]);
+  const auth = assertAuth(session);
 
   const visible =
     filter === "unread" ? result.data.filter((n) => !n.isRead) : result.data;
@@ -43,8 +41,8 @@ export default async function NotificationsPage({
       <PageHeader
         breadcrumb={[
           {
-            label: session.currentRole === "SUPER_ADMIN" ? "Platform" : "Dashboard",
-            href: session.currentRole === "SUPER_ADMIN" ? "/super-admin" : "/dashboard",
+            label: auth.currentRole === "SUPER_ADMIN" ? "Platform" : "Dashboard",
+            href: auth.currentRole === "SUPER_ADMIN" ? "/super-admin" : "/dashboard",
           },
           { label: "Notifications" },
         ]}

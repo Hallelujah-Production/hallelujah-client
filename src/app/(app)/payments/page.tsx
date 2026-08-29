@@ -13,8 +13,9 @@ import {
   PAYMENT_STATUS_OPTIONS,
   PaymentStatusBadge,
 } from "@/components/ui/badge";
-import { requireChurchAdmin } from "@/lib/guards";
-import { getPayments, getReportSummary } from "@/lib/services";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
+import { getPayments } from "@/lib/services";
 import type { PaymentMethod, PaymentStatus, PaymentView } from "@/lib/types";
 import { first, formatCurrency, formatDate, readNumberParam } from "@/lib/utils";
 import { paiseToRupees } from "@/lib/api/money";
@@ -29,9 +30,7 @@ export default async function PaymentsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const params = await searchParams;
-  const churchId = session.currentChurch.id;
 
   const query = {
     page: readNumberParam(first(params.page), 1),
@@ -45,14 +44,12 @@ export default async function PaymentsPage({
     maxAmount: Number(first(params.max)) || undefined,
   };
 
-  const [result, verified, month] = await Promise.all([
-    getPayments(churchId, query),
-    getPayments(churchId, { status: "VERIFIED", limit: 1, countsOnly: true }),
-    getReportSummary({ from: "", to: "", preset: "monthly" }),
-  ]);
+  const [session, result] = await Promise.all([getSession(), getPayments("", query)]);
+  const admin = assertChurchAdmin(session);
 
-  const verifiedTotal = paiseToRupees(month.payments.collected.totalPaise);
-  const pendingTotal = month.pendingVerification;
+  const pendingTotal = result.paymentStats?.pendingVerification ?? 0;
+  const verifiedCount = result.paymentStats?.verifiedCount ?? 0;
+  const verifiedTotal = paiseToRupees(result.paymentStats?.monthCollectedPaise ?? 0);
 
   const columns: Column<PaymentView>[] = [
     {
@@ -147,7 +144,7 @@ export default async function PaymentsPage({
         />
         <StatCard
           label="Verified payments"
-          value={verified.total}
+          value={verifiedCount}
           hint="Confirmed against parish records"
           tone="success"
           href="/payments?status=VERIFIED"
@@ -223,7 +220,7 @@ export default async function PaymentsPage({
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-        Verification is bookkeeping: the money already reached {session.currentChurch.name}
+        Verification is bookkeeping: the money already reached {admin.currentChurch.name}
         {" "}directly. No payment gateway is involved at any point.
       </p>
     </div>

@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SearchInput } from "@/components/data/search-input";
 import { StatCard, StatGrid } from "@/components/data/stat-card";
 import { EmptyState } from "@/components/ui/states";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getChurchTeam } from "@/lib/services";
 import { first, readNumberParam } from "@/lib/utils";
 import { Pagination } from "@/components/data/pagination";
@@ -20,33 +21,27 @@ export default async function TeamPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const params = await searchParams;
-
   const page = readNumberParam(first(params.page), 1);
   const search = first(params.search);
 
-  const [team, adminPage, staffPage] = await Promise.all([
-    getChurchTeam(session.currentChurch.id, {
-      search,
-      page,
-      limit: 20,
-    }),
-    getChurchTeam(session.currentChurch.id, { role: "CHURCH_ADMIN", limit: 1, countsOnly: true }),
-    getChurchTeam(session.currentChurch.id, { role: "CHURCH_STAFF", limit: 1, countsOnly: true }),
+  const [session, team] = await Promise.all([
+    getSession(),
+    getChurchTeam("", { search, page, limit: 20 }),
   ]);
+  const admin = assertChurchAdmin(session);
 
   return (
     <div className="space-y-6">
       <PageHeader
         breadcrumb={[{ label: "Dashboard", href: "/dashboard" }, { label: "Team" }]}
         title="Team"
-        description={`The people who run the prayer ministry at ${session.currentChurch.name}. Change role, deactivate, or delete from each card. When you add someone, allot them to the parish they should work in.`}
+        description={`The people who run the prayer ministry at ${admin.currentChurch.name}. Change role, deactivate, or delete from each card. When you add someone, allot them to the parish they should work in.`}
       />
 
       <StatGrid columns={3}>
-        <StatCard label="Church admins" value={adminPage.total} emphasis />
-        <StatCard label="Prayer staff" value={staffPage.total} emphasis />
+        <StatCard label="Church admins" value={team.roleTotals?.admins ?? 0} emphasis />
+        <StatCard label="Prayer staff" value={team.roleTotals?.staff ?? 0} emphasis />
         <StatCard
           label="On this page"
           value={`${team.data.length} of ${team.total}`}
@@ -73,9 +68,9 @@ export default async function TeamPage({
 
       <TeamManager
         members={team.data}
-        currentUserId={session.currentUser.id}
-        allottableChurches={session.assignedChurches}
-        defaultChurchId={session.currentChurch.id}
+        currentUserId={admin.currentUser.id}
+        allottableChurches={admin.assignedChurches}
+        defaultChurchId={admin.currentChurch.id}
       />
 
       {team.total ? (

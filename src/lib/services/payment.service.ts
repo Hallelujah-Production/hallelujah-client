@@ -6,26 +6,19 @@ import { rupeesToPaise } from "@/lib/api/money";
 import { ApiError } from "@/lib/api/errors";
 import { getSession } from "@/lib/session";
 import type { Paginated, PaymentQuery, PaymentView } from "@/lib/types";
+import type { ScopedListOptions } from "./helpers";
 
-async function churchFromSession() {
-  const session = await getSession();
-  return session?.currentChurch ?? null;
-}
-
-async function paymentListPath(churchId: string): Promise<string> {
-  const session = await getSession();
-  if (session?.currentRole === "SUPER_ADMIN") {
-    return `/admin/churches/${churchId}/payments`;
-  }
+function paymentListPath(churchId: string, options?: ScopedListOptions): string {
+  if (options?.forPlatform) return `/admin/churches/${churchId}/payments`;
   return "/payments";
 }
 
 export async function getPayments(
   churchId: string,
   query: PaymentQuery = {},
+  options?: ScopedListOptions,
 ): Promise<Paginated<PaymentView>> {
-  const church = await churchFromSession();
-  const result = await apiGetPaginated<Record<string, unknown>>(await paymentListPath(churchId), {
+  const result = await apiGetPaginated<Record<string, unknown>>(paymentListPath(churchId, options), {
     query: {
       page: query.page ?? 1,
       limit: query.limit ?? 20,
@@ -39,17 +32,16 @@ export async function getPayments(
       countsOnly: query.countsOnly ? true : undefined,
     },
   });
-  return { ...result, data: result.data.map((row) => mapPaymentView(row, church)) };
+  return { ...result, data: result.data.map((row) => mapPaymentView(row)) };
 }
 
 export async function getPaymentById(
   _churchId: string,
   paymentId: string,
 ): Promise<PaymentView | null> {
-  const church = await churchFromSession();
   try {
     const row = await apiGet<Record<string, unknown>>(`/payments/${paymentId}`);
-    const view = mapPaymentView(row, church);
+    const view = mapPaymentView(row);
     if (row.hasProof) {
       try {
         const proof = await apiGet<{ url?: string; signedUrl?: string }>(
@@ -72,12 +64,11 @@ export async function getCustomerPayments(
   churchId: string,
   customerId: string,
 ): Promise<PaymentView[]> {
-  const church = await churchFromSession();
   const result = await apiGetPaginated<Record<string, unknown>>(
     `/customers/${customerId}/payments`,
     { query: { page: 1, limit: 100 } },
   );
-  return result.data.map((row) => mapPaymentView(row, church ?? { id: churchId } as never));
+  return result.data.map((row) => mapPaymentView(row, churchId ? ({ id: churchId } as never) : null));
 }
 
 export async function confirmRecordedOfferings(churchId: string): Promise<void> {
@@ -108,7 +99,6 @@ export async function verifyPayment(
   paymentId: string,
   _actorUserId: string,
 ): Promise<PaymentView | null> {
-  const church = await churchFromSession();
   try {
     const { data } = await apiPost<Record<string, unknown>>(`/payments/${paymentId}/verify`, {});
     try {
@@ -119,7 +109,7 @@ export async function verifyPayment(
         if (!(error instanceof ApiError && error.code === "CONFLICT")) throw error;
       }
     }
-    return mapPaymentView(data, church);
+    return mapPaymentView(data);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
@@ -135,12 +125,11 @@ export async function rejectPayment(
   _actorUserId: string,
   reason: string,
 ): Promise<PaymentView | null> {
-  const church = await churchFromSession();
   try {
     const { data } = await apiPost<Record<string, unknown>>(`/payments/${paymentId}/reject`, {
       reason,
     });
-    return mapPaymentView(data, church);
+    return mapPaymentView(data);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;

@@ -52,3 +52,43 @@ export async function requireChurchStaff(): Promise<ChurchSession> {
 export async function requireSuperAdmin(): Promise<Session> {
   return requireRoles(["SUPER_ADMIN"]);
 }
+
+/**
+ * Role checks on an already-resolved session. Use these after
+ * `Promise.all([getSession(), getPageData()])` so page data is not blocked
+ * on /auth/me. Nest still authenticates every API call.
+ */
+export function assertAuth(session: Session | null): Session {
+  if (!session) redirect("/login");
+  if (session.mustChangePassword) redirect("/change-password");
+  return session;
+}
+
+export function assertRoles(session: Session | null, roles: Role[]): Session {
+  const resolved = assertAuth(session);
+  if (!roles.includes(resolved.currentRole)) {
+    redirect(landingRouteForRole(resolved.currentRole));
+  }
+  return resolved;
+}
+
+export function assertChurchSession(
+  session: Session | null,
+  roles: Role[] = ["CHURCH_ADMIN", "CHURCH_STAFF"],
+): ChurchSession {
+  const resolved = assertRoles(session, roles);
+  if (!resolved.currentChurch) redirect("/super-admin");
+  return resolved as ChurchSession;
+}
+
+export function assertChurchAdmin(session: Session | null): ChurchSession {
+  return assertChurchSession(session, ["CHURCH_ADMIN"]);
+}
+
+export function assertChurchStaff(session: Session | null): ChurchSession {
+  return assertChurchSession(session, ["CHURCH_STAFF"]);
+}
+
+export function assertSuperAdmin(session: Session | null): Session {
+  return assertRoles(session, ["SUPER_ADMIN"]);
+}

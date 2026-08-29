@@ -17,7 +17,8 @@ import { StatCard, StatGrid, ChartCard } from "@/components/data/stat-card";
 import { TrendAreaChart, DualBarChart, RankedBarChart, SplitDonutChart } from "@/components/data/charts";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/states";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getPlatformStats, getRecentActivity, getChurchViews } from "@/lib/services";
 import { formatCompactCurrency, formatCurrency, relativeTime } from "@/lib/utils";
 import type { TrendPoint } from "@/lib/types";
@@ -44,21 +45,32 @@ function hasValues(series: TrendPoint[]): boolean {
 }
 
 export default async function SuperAdminDashboard() {
-  const session = await requireSuperAdmin();
+  const sessionPromise = getSession();
+  const statsP = getPlatformStats();
+  const activityP = getRecentActivity(8);
+  const churchesP = getChurchViews({ limit: 6 });
+
+  const session = assertSuperAdmin(await sessionPromise);
   const firstName = session.currentUser.name.split(" ")[0] || session.currentUser.name;
   return (
     <Suspense fallback={<SuperAdminLoading />}>
-      <SuperAdminDashboardBody firstName={firstName} />
+      <SuperAdminDashboardBody firstName={firstName} statsP={statsP} activityP={activityP} churchesP={churchesP} />
     </Suspense>
   );
 }
 
-async function SuperAdminDashboardBody({ firstName }: { firstName: string }) {
-  const [stats, activity, churches] = await Promise.all([
-    getPlatformStats(),
-    getRecentActivity(8),
-    getChurchViews({ limit: 6 }),
-  ]);
+async function SuperAdminDashboardBody({
+  firstName,
+  statsP,
+  activityP,
+  churchesP,
+}: {
+  firstName: string;
+  statsP: ReturnType<typeof getPlatformStats>;
+  activityP: ReturnType<typeof getRecentActivity>;
+  churchesP: ReturnType<typeof getChurchViews>;
+}) {
+  const [stats, activity, churches] = await Promise.all([statsP, activityP, churchesP]);
   const isFresh = stats.totalChurches === 0;
   const showCharts =
     hasValues(stats.revenueTrend) ||

@@ -6,7 +6,8 @@ import { SearchInput } from "@/components/data/search-input";
 import { DataTable, type Column } from "@/components/data/data-table";
 import { Pagination } from "@/components/data/pagination";
 import { ButtonLink } from "@/components/ui/button";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getCustomers } from "@/lib/services";
 import type { CustomerView } from "@/lib/types";
 import { first, formatCurrency, formatDate, readNumberParam } from "@/lib/utils";
@@ -21,14 +22,17 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const params = await searchParams;
 
-  const result = await getCustomers(session.currentChurch.id, {
-    page: readNumberParam(first(params.page), 1),
-    limit: 20,
-    search: first(params.search),
-  });
+  const [session, result] = await Promise.all([
+    getSession(),
+    getCustomers("", {
+      page: readNumberParam(first(params.page), 1),
+      limit: 20,
+      search: first(params.search),
+    }),
+  ]);
+  const admin = assertChurchAdmin(session);
 
   const columns: Column<CustomerView>[] = [
     {
@@ -152,7 +156,7 @@ export default async function CustomersPage({
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <Users className="h-3.5 w-3.5" aria-hidden="true" />
-        Family records belong to {session.currentChurch.name} alone and are not shared
+        Family records belong to {admin.currentChurch.name} alone and are not shared
         between churches.
       </p>
     </div>

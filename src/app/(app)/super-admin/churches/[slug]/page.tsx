@@ -10,7 +10,8 @@ import { Badge, MethodBadge, PaymentStatusBadge, StatusBadge } from "@/component
 import { ChurchMark } from "@/components/layout/church-mark";
 import { ReportView } from "@/components/domain/report-view";
 import { EmptyState } from "@/components/ui/states";
-import { requireSuperAdmin } from "@/lib/guards";
+import { assertSuperAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import {
   getChurchAdmins,
   getChurchBySlugForPlatform,
@@ -54,19 +55,29 @@ const SECTIONS = [
 ];
 
 export default async function PlatformChurchPage({ params, searchParams }: PageProps) {
-  const session = await requireSuperAdmin();
   const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const section = first(query.section) ?? "overview";
 
-  const church = await getChurchBySlugForPlatform(slug);
+  const [session, church] = await Promise.all([getSession(), getChurchBySlugForPlatform(slug)]);
+  const admin = assertSuperAdmin(session);
   if (!church) notFound();
 
-  const section = first(query.section) ?? "overview";
-  const view = await getChurchView(church.id);
-  const [team, assignedAdmins, allAdmins] = await Promise.all([
-    getChurchTeam(church.id, { limit: 60 }),
-    getChurchAdmins(church.id),
-    getUsers({ role: "CHURCH_ADMIN", status: "ACTIVE", limit: 100 }),
-  ]);
+  const platform = { forPlatform: true as const };
+
+  const viewPromise = section === "overview" ? getChurchView(church.id) : Promise.resolve(null);
+  const teamPromise =
+    section === "team" ? getChurchTeam(church.id, { limit: 60 }, platform) : Promise.resolve(null);
+  const adminPromise =
+    section === "admin"
+      ? Promise.all([
+          getChurchAdmins(church.id),
+          getUsers({ role: "CHURCH_ADMIN", status: "ACTIVE", limit: 100 }),
+        ])
+      : Promise.resolve(null);
+
+  const [view, team, adminBundle] = await Promise.all([viewPromise, teamPromise, adminPromise]);
+  const assignedAdmins = adminBundle?.[0] ?? [];
+  const allAdmins = adminBundle?.[1];
 
   const hrefFor = (id: string) =>
     id === "overview"
@@ -138,13 +149,13 @@ export default async function PlatformChurchPage({ params, searchParams }: PageP
           churchId={church.id}
           churchName={church.name}
           assigned={assignedAdmins}
-          candidates={allAdmins.data}
+          candidates={allAdmins?.data ?? []}
         />
       ) : null}
       {section === "team" ? (
         <TeamSection
-          members={team.data}
-          currentUserId={session.currentUser.id}
+          members={team?.data ?? []}
+          currentUserId={admin.currentUser.id}
           churchId={church.id}
         />
       ) : null}
@@ -167,8 +178,8 @@ async function Overview({
 }) {
   if (!view) return null;
   const [recent, pending] = await Promise.all([
-    getIntentions(churchId, { limit: 5 }),
-    getPayments(churchId, { status: "PENDING_VERIFICATION", limit: 1, countsOnly: true }),
+    getIntentions(churchId, { limit: 5 }, { forPlatform: true }),
+    getPayments(churchId, { status: "PENDING_VERIFICATION", limit: 1, countsOnly: true }, { forPlatform: true }),
   ]);
 
   return (
@@ -295,7 +306,7 @@ const intentionColumns: Column<IntentionView>[] = [
 ];
 
 async function IntentionsSection({ churchId }: { churchId: string }) {
-  const result = await getIntentions(churchId, { limit: 20 });
+  const result = await getIntentions(churchId, { limit: 20 }, { forPlatform: true });
   return result.data.length ? (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
@@ -310,7 +321,7 @@ async function IntentionsSection({ churchId }: { churchId: string }) {
 }
 
 async function PaymentsSection({ churchId }: { churchId: string }) {
-  const result = await getPayments(churchId, { limit: 20 });
+  const result = await getPayments(churchId, { limit: 20 }, { forPlatform: true });
 
   const columns: Column<PaymentView>[] = [
     {

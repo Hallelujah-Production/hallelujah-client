@@ -13,7 +13,8 @@ import {
   StatusBadge,
 } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { requireChurchAdmin } from "@/lib/guards";
+import { assertChurchAdmin } from "@/lib/guards";
+import { getSession } from "@/lib/session";
 import { getAssignableStaff, getIntentions, getPrayerTypes } from "@/lib/services";
 import type { IntentionStatus, IntentionView, PaymentStatus } from "@/lib/types";
 import { first, formatCurrency, formatDate, formatPrayerDuration, readNumberParam } from "@/lib/utils";
@@ -29,7 +30,6 @@ export default async function IntentionsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireChurchAdmin();
   const params = await searchParams;
 
   const page = readNumberParam(first(params.page), 1);
@@ -41,8 +41,9 @@ export default async function IntentionsPage({
   const from = first(params.from);
   const to = first(params.to);
 
-  const [result, prayerTypes, staff] = await Promise.all([
-    getIntentions(session.currentChurch.id, {
+  const [session, result, prayerTypes, staff] = await Promise.all([
+    getSession(),
+    getIntentions("", {
       page,
       limit: 20,
       search,
@@ -54,8 +55,9 @@ export default async function IntentionsPage({
       to,
     }),
     getPrayerTypes(),
-    getAssignableStaff(session.currentChurch.id),
+    getAssignableStaff(),
   ]);
+  const admin = assertChurchAdmin(session);
 
   const columns: Column<IntentionView>[] = [
     {
@@ -256,7 +258,7 @@ export default async function IntentionsPage({
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-        Only intentions belonging to {session.currentChurch.name} are listed here.
+        Only intentions belonging to {admin.currentChurch.name} are listed here.
       </p>
     </div>
   );

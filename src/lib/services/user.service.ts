@@ -3,9 +3,8 @@ import "server-only";
 import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from "@/lib/api/client";
 import { mapUser, mapUserView } from "@/lib/api/adapters";
 import { ApiError, fieldErrors, userMessage } from "@/lib/api/errors";
-import { getSession } from "@/lib/session";
 import type { Paginated, Role, User, UserView } from "@/lib/types";
-import { developmentInviteToken } from "./helpers";
+import { developmentInviteToken, type ScopedListOptions } from "./helpers";
 
 export async function getUserById(id: string): Promise<User | null> {
   try {
@@ -34,9 +33,9 @@ export async function getChurchTeam(
     limit?: number;
     countsOnly?: boolean;
   } = {},
+  options?: ScopedListOptions,
 ): Promise<Paginated<UserView>> {
-  const session = await getSession();
-  if (session?.currentRole === "SUPER_ADMIN") {
+  if (options?.forPlatform) {
     return getUsers({
       search: params.search,
       role: params.role,
@@ -59,25 +58,9 @@ export async function getChurchTeam(
 }
 
 export async function getAssignableStaff(churchId?: string): Promise<User[]> {
-  try {
-    const rows = await apiGet<Record<string, unknown>[]>("/team/prayer-staff");
-    if (Array.isArray(rows) && rows.length) {
-      return rows
-        .map(mapUser)
-        .filter(
-          (u) =>
-            u.role === "CHURCH_STAFF" &&
-            u.isActive &&
-            (!churchId || u.churchId === churchId),
-        );
-    }
-  } catch {
-    // Fall through to the current-workspace team list.
-  }
-  const result = await apiGetPaginated<Record<string, unknown>>("/team", {
-    query: { role: "CHURCH_STAFF", status: "ACTIVE", limit: 100 },
-  });
-  return result.data
+  const rows = await apiGet<Record<string, unknown>[]>("/team/prayer-staff");
+  if (!Array.isArray(rows)) return [];
+  return rows
     .map(mapUser)
     .filter(
       (u) =>
@@ -113,25 +96,12 @@ export async function getUsers(
 }
 
 export async function getUserCounts() {
-  const [all, admins, staff, supers] = await Promise.all([
-    apiGetPaginated<Record<string, unknown>>("/admin/users", {
-      query: { limit: 1, countsOnly: true },
-    }),
-    apiGetPaginated<Record<string, unknown>>("/admin/users", {
-      query: { role: "CHURCH_ADMIN", limit: 1, countsOnly: true },
-    }),
-    apiGetPaginated<Record<string, unknown>>("/admin/users", {
-      query: { role: "CHURCH_STAFF", limit: 1, countsOnly: true },
-    }),
-    apiGetPaginated<Record<string, unknown>>("/admin/users", {
-      query: { role: "SUPER_ADMIN", limit: 1, countsOnly: true },
-    }),
-  ]);
+  const page = await getUsers({ limit: 1 });
   return {
-    total: all.total,
-    admins: admins.total,
-    staff: staff.total,
-    superAdmins: supers.total,
+    total: page.roleTotals?.total ?? page.total,
+    admins: page.roleTotals?.admins ?? 0,
+    staff: page.roleTotals?.staff ?? 0,
+    superAdmins: page.roleTotals?.superAdmins ?? 0,
   };
 }
 

@@ -4,7 +4,6 @@ import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost, apiUpload } from
 import { mapIntention } from "@/lib/api/adapters";
 import { ApiError, userMessage } from "@/lib/api/errors";
 import { rupeesToPaise } from "@/lib/api/money";
-import { getSession } from "@/lib/session";
 import { TODAY, formatPrayerDuration } from "@/lib/utils";
 import { toCsv } from "@/lib/csv";
 import type {
@@ -16,30 +15,19 @@ import type {
   PaymentProof,
 } from "@/lib/types";
 import { requiresTransactionId } from "@/lib/types";
+import type { ScopedListOptions } from "./helpers";
 
-async function churchFromSession(churchId?: string) {
-  const session = await getSession();
-  if (churchId) {
-    const match = session?.assignedChurches.find((c) => c.id === churchId);
-    if (match) return match;
-  }
-  return session?.currentChurch ?? null;
-}
-
-async function intentionListPath(churchId: string): Promise<string> {
-  const session = await getSession();
-  if (session?.currentRole === "SUPER_ADMIN") {
-    return `/admin/churches/${churchId}/intentions`;
-  }
+function intentionListPath(churchId: string, options?: ScopedListOptions): string {
+  if (options?.forPlatform) return `/admin/churches/${churchId}/intentions`;
   return "/intentions";
 }
 
 export async function getIntentions(
   churchId: string,
   query: IntentionQuery = {},
+  options?: ScopedListOptions,
 ): Promise<Paginated<IntentionView>> {
-  const church = await churchFromSession();
-  const result = await apiGetPaginated<Record<string, unknown>>(await intentionListPath(churchId), {
+  const result = await apiGetPaginated<Record<string, unknown>>(intentionListPath(churchId, options), {
     query: {
       page: query.page ?? 1,
       limit: query.limit ?? 20,
@@ -53,7 +41,7 @@ export async function getIntentions(
       countsOnly: query.countsOnly ? true : undefined,
     },
   });
-  return { ...result, data: result.data.map((row) => mapIntention(row, church)) };
+  return { ...result, data: result.data.map((row) => mapIntention(row)) };
 }
 
 export async function getIntentionRegister(
@@ -171,30 +159,35 @@ export async function getIntentionById(
   _churchId: string,
   id: string,
 ): Promise<IntentionView | null> {
-  const church = await churchFromSession(_churchId);
   try {
     const row = await apiGet<Record<string, unknown>>(`/intentions/${id}`);
-    const view = mapIntention(row, church);
+    const view = mapIntention(row);
+    const extras: Promise<void>[] = [];
     if (view.payment?.id && view.payment.proof) {
-      try {
-        const proof = await apiGet<{ url?: string; signedUrl?: string }>(
-          `/payments/${view.payment.id}/proof-url`,
-        );
-        const url = proof.url || proof.signedUrl;
-        if (url) view.payment.proof.previewUrl = url;
-      } catch {
-        // Proof remains listed without a preview if the signed URL fails.
-      }
+      extras.push(
+        apiGet<{ url?: string; signedUrl?: string }>(`/payments/${view.payment.id}/proof-url`)
+          .then((proof) => {
+            const url = proof.url || proof.signedUrl;
+            if (url) view.payment.proof!.previewUrl = url;
+          })
+          .catch(() => undefined),
+      );
     }
     if (!view.receiptId && view.reference) {
-      const receipts = await apiGetPaginated<Record<string, unknown>>("/receipts", {
-        query: { search: view.reference, limit: 5 },
-      }).catch(() => null);
-      const match = receipts?.data.find(
-        (r) => r.intentionReference === view.reference || r.intentionId === view.id,
+      extras.push(
+        apiGetPaginated<Record<string, unknown>>("/receipts", {
+          query: { search: view.reference, limit: 5 },
+        })
+          .then((receipts) => {
+            const match = receipts.data.find(
+              (r) => r.intentionReference === view.reference || r.intentionId === view.id,
+            );
+            if (match) view.receiptId = String(match.id);
+          })
+          .catch(() => undefined),
       );
-      if (match) view.receiptId = String(match.id);
     }
+    if (extras.length) await Promise.all(extras);
     return view;
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
@@ -218,12 +211,11 @@ export async function getCustomerIntentions(
   _churchId: string,
   customerId: string,
 ): Promise<IntentionView[]> {
-  const church = await churchFromSession();
   const result = await apiGetPaginated<Record<string, unknown>>(
     `/customers/${customerId}/intentions`,
     { query: { page: 1, limit: 100 } },
   );
-  return result.data.map((row) => mapIntention(row, church));
+  return result.data.map((row) => mapIntention(row));
 }
 
 export type StaffScope = "today" | "upcoming" | "completed" | "all";
@@ -234,7 +226,6 @@ export async function getStaffIntentions(
   scope: StaffScope = "all",
   query: { page?: number; limit?: number; search?: string } = {},
 ): Promise<Paginated<IntentionView>> {
-  const church = await churchFromSession();
   const result = await apiGetPaginated<Record<string, unknown>>("/my-prayers", {
     query: {
       scope,
@@ -243,7 +234,7 @@ export async function getStaffIntentions(
       search: query.search,
     },
   });
-  return { ...result, data: result.data.map((row) => mapIntention(row, church)) };
+  return { ...result, data: result.data.map((row) => mapIntention(row)) };
 }
 
 export async function getStaffIntentionById(
@@ -251,10 +242,9 @@ export async function getStaffIntentionById(
   _staffUserId: string,
   id: string,
 ): Promise<IntentionView | null> {
-  const church = await churchFromSession();
   try {
     const row = await apiGet<Record<string, unknown>>(`/my-prayers/${id}`);
-    return mapIntention(row, church);
+    return mapIntention(row);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
@@ -391,7 +381,7 @@ export async function createIntention(input: CreateIntentionInput): Promise<Crea
     }
 
     const { data } = await apiPost<Record<string, unknown>>("/intentions", payload);
-    let intention = mapIntention(data, await churchFromSession(input.churchId));
+    let intention = mapIntention(data);
 
     if (input.proofFile && intention.paymentId) {
       const form = new FormData();
@@ -430,7 +420,7 @@ export async function assignIntention(
     const { data } = await apiPost<Record<string, unknown>>(`/intentions/${intentionId}/assign`, {
       staffUserId,
     });
-    return mapIntention(data, await churchFromSession());
+    return mapIntention(data);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
@@ -446,7 +436,7 @@ export async function startIntention(
 ): Promise<IntentionView | null> {
   try {
     const { data } = await apiPost<Record<string, unknown>>(`/intentions/${intentionId}/start`, {});
-    return mapIntention(data, await churchFromSession());
+    return mapIntention(data);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
@@ -463,7 +453,7 @@ export async function completeIntention(
       `/intentions/${intentionId}/complete`,
       {},
     );
-    return mapIntention(data, await churchFromSession());
+    return mapIntention(data);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
@@ -482,7 +472,7 @@ export async function cancelIntention(
     const { data } = await apiPost<Record<string, unknown>>(`/intentions/${intentionId}/cancel`, {
       reason: reason || "Cancelled by the church.",
     });
-    return mapIntention(data, await churchFromSession());
+    return mapIntention(data);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
@@ -514,7 +504,7 @@ export async function updateIntention(
 ): Promise<IntentionView | null> {
   try {
     const { data } = await apiPatch<Record<string, unknown>>(`/intentions/${intentionId}`, patch);
-    return mapIntention(data, await churchFromSession());
+    return mapIntention(data);
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;

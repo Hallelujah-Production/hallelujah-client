@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from "@/lib/api/client";
 import { mapChurch, mapChurchView, mapPublicChurch } from "@/lib/api/adapters";
 import { ApiError } from "@/lib/api/errors";
@@ -54,7 +55,7 @@ export async function getOwnChurch(): Promise<Church | null> {
   }
 }
 
-export async function getChurchBySlugForPlatform(slug: string): Promise<Church | null> {
+export const getChurchBySlugForPlatform = cache(async (slug: string): Promise<Church | null> => {
   try {
     const row = await apiGet<Record<string, unknown>>(`/admin/churches/${slug}`);
     return mapChurchView(row);
@@ -62,7 +63,7 @@ export async function getChurchBySlugForPlatform(slug: string): Promise<Church |
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
   }
-}
+});
 
 export async function getChurchById(id: string): Promise<Church | null> {
   try {
