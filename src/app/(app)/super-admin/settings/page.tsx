@@ -59,7 +59,7 @@ export default async function PlatformSettingsPage() {
           <CardContent className="pt-1">
             <DetailList>
               <DetailRow label="Name">{admin.currentUser.name}</DetailRow>
-              <DetailRow label="Email">{admin.currentUser.email}</DetailRow>
+              <DetailRow label="Username">{admin.currentUser.username}</DetailRow>
               <DetailRow label="Role">Platform Administrator</DetailRow>
               <DetailRow label="Scope">
                 Every church on the platform. All actions are audit-logged.

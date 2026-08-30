@@ -56,7 +56,7 @@ export function isApiError(error: unknown): error is ApiError {
 const CODE_MESSAGES: Record<string, string> = {
   UNAUTHENTICATED: "Your session has expired. Please sign in again.",
   SESSION_EXPIRED: "Your session has expired. Please sign in again.",
-  INVALID_CREDENTIALS: "Invalid email or password.",
+  INVALID_CREDENTIALS: "Invalid username or password.",
   FORBIDDEN: "You don’t have permission to perform this action.",
   NOT_FOUND: "The requested item could not be found.",
   CONFLICT: "This record already exists or has changed. Please refresh and try again.",
@@ -88,7 +88,7 @@ const TECHNICAL =
 function friendlyFieldMessage(key: string, raw: string): string | null {
   if (!raw || TECHNICAL.test(raw)) return null;
   if (/must be a UUID/i.test(raw) && key === "churchId") return "Select a church from the list.";
-  if (/must be an email/i.test(raw)) return "Enter a valid email address for the account.";
+  if (/must be an email/i.test(raw)) return "Enter a valid parish email address.";
   if (/must be longer than or equal to 10/i.test(raw)) return "Use at least 10 characters.";
   if (/should not exist/i.test(raw)) return null;
   return raw;

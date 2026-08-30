@@ -111,7 +111,7 @@ export function TeamManager({
                   <h3 className="truncate font-display text-base font-semibold tracking-tight text-foreground">
                     {member.name}
                   </h3>
-                  <p className="truncate text-xs text-muted-foreground">{member.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">{member.username}</p>
                 </div>
               </div>
 
@@ -198,7 +198,7 @@ export function TeamManager({
         description={
           showCreated
             ? "The account is ready. They sign in with the password you set, then choose a new one."
-            : "Enter name, email, role, church, and a password. No invitation email is sent."
+            : "Enter name, username, role, church, and a password. No invitation email is sent."
         }
       >
         {showCreated && state.status === "success" ? (
@@ -278,9 +278,9 @@ export function TeamManager({
             {(aria) => <Input {...aria} name="name" placeholder="Sr. Mary Grace" />}
           </Field>
 
-          <Field id="member-email" label="Email address" required error={state.fields?.email}>
+          <Field id="member-username" label="Username" required error={state.fields?.username} description="They sign in with this username and the password you set.">
             {(aria) => (
-              <Input {...aria} name="email" type="email" placeholder="mary.grace@parish.example" />
+              <Input {...aria} name="username" type="text" autoComplete="off" placeholder="fr.joseph" />
             )}
           </Field>
 
@@ -451,7 +451,7 @@ export function TeamManager({
         onClose={() => setResetTarget(null)}
         userId={resetTarget?.id ?? ""}
         userName={resetTarget?.name ?? ""}
-        userEmail={resetTarget?.email}
+        userEmail={resetTarget?.username}
       />
     </div>
   );

@@ -12,7 +12,7 @@ export function AutoPrint({ enabled }: { enabled: boolean }) {
   React.useEffect(() => {
     if (!enabled || fired.current) return;
     fired.current = true;
-    const timer = setTimeout(() => window.print(), 350);
+    const timer = setTimeout(() => window.print(), 700);
     return () => clearTimeout(timer);
   }, [enabled]);
 

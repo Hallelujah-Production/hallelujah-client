@@ -61,7 +61,7 @@ export default async function SetPasswordPage({
             </p>
           ) : (
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Use at least 10 characters. After you save it, sign in with your email.
+              Use at least 10 characters. After you save it, sign in with your username.
             </p>
           )}
           <div className="mt-8">

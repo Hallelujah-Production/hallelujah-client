@@ -107,7 +107,7 @@ export async function getUserCounts() {
 
 export interface CreateUserInput {
   name: string;
-  email: string;
+  username: string;
   phone: string;
   role: Exclude<Role, "SUPER_ADMIN"> | Role;
   churchId: string | null;
@@ -121,7 +121,7 @@ export async function createUser(
 ): Promise<{ ok: true; user: User } | { ok: false; error: string; fields?: Record<string, string> }> {
   const payload = {
     name: input.name,
-    email: input.email,
+    username: input.username,
     phone: input.phone || undefined,
     role: input.role,
     churchId: input.role === "SUPER_ADMIN" ? undefined : input.churchId,
@@ -164,7 +164,7 @@ export async function setUserActive(userId: string, isActive: boolean): Promise<
 
 export async function updateUser(
   userId: string,
-  patch: Partial<Pick<User, "name" | "email" | "phone" | "role">>,
+  patch: Partial<Pick<User, "name" | "username" | "phone" | "role">>,
 ): Promise<User | null> {
   try {
     const { data } = await apiPatch<Record<string, unknown>>(`/team/${userId}`, patch);

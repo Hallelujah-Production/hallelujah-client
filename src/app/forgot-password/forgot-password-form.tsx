@@ -16,7 +16,7 @@ const initialState: ResetState = { status: "idle" };
 export function ForgotPasswordForm() {
   const router = useRouter();
   const [step, setStep] = React.useState<1 | 2>(1);
-  const [email, setEmail] = React.useState("");
+  const [username, setUsername] = React.useState("");
   const [recoveryCode, setRecoveryCode] = React.useState("");
   const [issuedCode, setIssuedCode] = React.useState<string | null>(null);
   const [state, formAction, pending] = useActionState(recoveryResetAction, initialState);
@@ -54,21 +54,22 @@ export function ForgotPasswordForm() {
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (!email.trim()) return;
+          if (!username.trim()) return;
           if (!recoveryCode.trim()) return;
           setStep(2);
         }}
       >
-        <Field id="email" label="Email" required>
+        <Field id="username" label="Username" required>
           {(aria) => (
             <Input
               {...aria}
-              name="email"
-              type="email"
+              name="username"
+              type="text"
               autoComplete="username"
               autoFocus
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="fr.joseph"
             />
           )}
         </Field>
@@ -90,7 +91,7 @@ export function ForgotPasswordForm() {
             />
           )}
         </Field>
-        <Button type="submit" size="lg" className="w-full" disabled={!email.trim() || !recoveryCode.trim()}>
+        <Button type="submit" size="lg" className="w-full" disabled={!username.trim() || !recoveryCode.trim()}>
           Continue
         </Button>
       </form>
@@ -99,7 +100,7 @@ export function ForgotPasswordForm() {
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
-      <input type="hidden" name="email" value={email} />
+      <input type="hidden" name="username" value={username} />
       <input type="hidden" name="recoveryCode" value={recoveryCode} />
 
       {state.status === "error" && state.message ? (

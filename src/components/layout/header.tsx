@@ -28,7 +28,7 @@ export function Header({
   identity: WorkspaceIdentity;
   sections: NavSection[];
   badges: BadgeCounts;
-  user: { name: string; email: string; initials: string; role: Role; roleLabel: string };
+  user: { name: string; username: string; initials: string; role: Role; roleLabel: string };
   assignedChurches?: { id: string; name: string }[];
   currentChurchId?: string | null;
 }) {
@@ -97,7 +97,7 @@ export function Header({
 
         <UserMenu
           name={user.name}
-          email={user.email}
+          username={user.username}
           initials={user.initials}
           roleLabel={user.roleLabel}
           role={user.role}

@@ -153,6 +153,7 @@ export async function getReport(filters: ReportFilters): Promise<ReportResult> {
       id: row.staffUserId,
       churchId: filters.churchId ?? null,
       name: row.name,
+      username: "",
       email: "",
       phone: "",
       role: "CHURCH_STAFF",

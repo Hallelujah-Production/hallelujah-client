@@ -5,6 +5,7 @@ import { assignChurchAdmin, createChurch, deleteChurch, setChurchActive, unassig
 import { ApiError, userMessage } from "@/lib/api/errors";
 import { getSession } from "@/lib/session";
 import { slugify } from "@/lib/utils";
+import { isValidUsername, USERNAME_MESSAGE } from "@/lib/username";
 
 export interface ChurchFormState {
   status: "idle" | "error" | "success";
@@ -32,7 +33,7 @@ export async function createChurchAction(
   const email = String(formData.get("email") ?? "").trim();
   const adminUserId = String(formData.get("adminUserId") ?? "").trim();
   const adminName = String(formData.get("adminName") ?? "").trim();
-  const adminEmail = String(formData.get("adminEmail") ?? "").trim();
+  const adminUsername = String(formData.get("adminUsername") ?? "").trim().toLowerCase();
   const adminPassword = String(formData.get("adminPassword") ?? "");
   const adminConfirmPassword = String(formData.get("adminConfirmPassword") ?? "");
 
@@ -47,8 +48,8 @@ export async function createChurchAction(
   }
   if (!adminUserId) {
     if (!adminName) errors.adminName = "Name the person who will administer this church.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
-      errors.adminEmail = "Enter a valid email address for the administrator account.";
+    if (!isValidUsername(adminUsername)) {
+      errors.adminUsername = USERNAME_MESSAGE;
     }
     if (adminPassword.length < 10) {
       errors.adminPassword = "Use at least 10 characters.";
@@ -75,7 +76,7 @@ export async function createChurchAction(
       description: String(formData.get("description") ?? "").trim() || undefined,
       adminUserId: adminUserId || undefined,
       adminName: adminUserId ? undefined : adminName,
-      adminEmail: adminUserId ? undefined : adminEmail,
+      adminUsername: adminUserId ? undefined : adminUsername,
       adminPhone: String(formData.get("adminPhone") ?? "").trim() || undefined,
       adminPassword: adminUserId ? undefined : adminPassword,
       adminConfirmPassword: adminUserId ? undefined : adminConfirmPassword,

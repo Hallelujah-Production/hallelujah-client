@@ -119,7 +119,7 @@ export interface CreateChurchInput {
   tagline?: string;
   description?: string;
   adminName?: string;
-  adminEmail?: string;
+  adminUsername?: string;
   adminPhone?: string;
   adminUserId?: string;
   adminPassword?: string;
@@ -158,7 +158,8 @@ export async function getChurchAdmins(churchId: string): Promise<
   {
     id: string;
     name: string;
-    email: string;
+    username: string;
+    email: string | null;
     phone: string | null;
     isActive: boolean;
     avatarInitials: string;
@@ -169,7 +170,8 @@ export async function getChurchAdmins(churchId: string): Promise<
     {
       id: string;
       name: string;
-      email: string;
+      username: string;
+      email: string | null;
       phone: string | null;
       isActive: boolean;
       avatarInitials: string;

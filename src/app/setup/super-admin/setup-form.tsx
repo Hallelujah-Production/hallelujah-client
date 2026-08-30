@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { AlertTriangle, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Lock, User } from "lucide-react";
 import { createSuperAdminAction, type SetupState } from "@/app/actions/setup";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form";
@@ -46,17 +46,17 @@ export function SetupForm() {
         )}
       </Field>
 
-      <Field id="email" label="Email" required error={state.fields?.email}>
+      <Field id="username" label="Username" required error={state.fields?.username}>
         {(aria) => (
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
               {...aria}
-              name="email"
-              type="email"
-              autoComplete="email"
-              defaultValue={state.values?.email ?? ""}
-              placeholder="you@example.com"
+              name="username"
+              type="text"
+              autoComplete="username"
+              defaultValue={state.values?.username ?? ""}
+              placeholder="fr.joseph"
               className={fieldClass}
             />
           </div>

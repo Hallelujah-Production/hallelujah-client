@@ -1,31 +1,20 @@
 import { PAYMENT_METHOD_LABEL, type ReceiptView } from "@/lib/types";
-import {
-  cn,
-  formatCurrency,
-  formatDate,
-  formatDateTime,
-  formatLongDate,
-} from "@/lib/utils";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 
 /** Print-receipt crest only. Do not use on the app chrome or public site. */
 const RECEIPT_LOGO_SRC = "/brand/receipt-logo.jpeg";
 
+/** Standard 80mm thermal / POS roll. Height follows content — never a fixed page. */
+export const THERMAL_WIDTH_MM = 80;
+
 const PAYMENT_STATUS_TEXT = {
-  PENDING_VERIFICATION: "⚠ Pending verification",
-  VERIFIED: "✓ Verified",
-  REJECTED: "✕ Rejected",
+  PENDING_VERIFICATION: "PENDING",
+  VERIFIED: "VERIFIED",
+  REJECTED: "REJECTED",
 } as const;
 
-/** ISO 216 A4 portrait — screen preview and print share this sheet. */
-export const A4_WIDTH_MM = 210;
-export const A4_HEIGHT_MM = 297;
-
 /**
- * The official church receipt.
- *
- * This is the one screen that leaves the building: it is printed and handed to
- * a family. The sheet is locked to A4 (210mm × 297mm) so on-screen and paper
- * match; the print stylesheet strips the application around it.
+ * Compact 80mm thermal receipt. Screen preview is the same width as the roll.
  */
 export function Receipt({
   receipt,
@@ -35,234 +24,140 @@ export function Receipt({
   className?: string;
 }) {
   const { church, customer, intention, prayerType, payment } = receipt;
+  const locality = [church.addressLine1, church.city].filter(Boolean).join(", ");
+  const requestedBy = intention.requestedBy?.trim();
+  const showRequestedBy =
+    Boolean(requestedBy) &&
+    requestedBy.toLowerCase() !== customer.name.trim().toLowerCase() &&
+    requestedBy.toLowerCase() !== (receipt.receivedBy?.name ?? "").trim().toLowerCase();
 
   return (
     <article
       id="official-receipt"
       data-print="area"
       className={cn(
-        "mx-auto box-border flex w-full flex-col border border-border bg-white p-[12mm] text-[0.9rem] text-foreground shadow-sm print:border-0 print:shadow-none",
+        "mx-auto box-border w-[80mm] max-w-[80mm] bg-white px-[3mm] py-[3mm] text-[11px] leading-snug text-foreground shadow-sm print:shadow-none",
         className,
       )}
-      style={{
-        width: `${A4_WIDTH_MM}mm`,
-        maxWidth: `${A4_WIDTH_MM}mm`,
-        minHeight: `${A4_HEIGHT_MM}mm`,
-      }}
       aria-label={`Receipt ${receipt.reference}`}
     >
-      {/* Church header */}
-      <header className="flex flex-nowrap items-start justify-between gap-6 border-b-2 border-primary pb-6">
-        <div className="flex min-w-0 flex-1 flex-nowrap items-start gap-4">
-          <img
-            src={RECEIPT_LOGO_SRC}
-            alt=""
-            width={96}
-            height={96}
-            className="h-20 w-20 shrink-0 object-contain print:h-[22mm] print:w-[22mm]"
-          />
-          <div className="min-w-0">
-            <h2 className="font-display text-xl font-bold tracking-tight text-primary [text-wrap:wrap]">
-              {church.name}
-            </h2>
-            <address className="mt-1.5 text-xs not-italic leading-relaxed text-muted-foreground [overflow-wrap:normal] [word-break:normal]">
-              {church.addressLine1}
-              {church.addressLine2 ? <>, {church.addressLine2}</> : null}
-              <br />
-              {church.city}, {church.state} {church.postalCode}
-              <br />
-              {church.phone} · {church.email}
-            </address>
-          </div>
-        </div>
-
-        <div className="shrink-0 text-right">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-accent">
-            Official receipt
-          </p>
-          <p className="mt-1 font-display text-lg font-bold tabular-nums text-foreground">
-            {receipt.reference}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Issued {formatDate(receipt.issuedAt)}
-          </p>
-        </div>
+      <header className="text-center">
+        <img
+          src={RECEIPT_LOGO_SRC}
+          alt=""
+          width={52}
+          height={52}
+          className="mx-auto h-[13mm] w-[13mm] object-contain"
+        />
+        <h2 className="mt-1 font-display text-[13px] font-bold uppercase leading-tight tracking-tight text-primary">
+          {church.name}
+        </h2>
+        <p className="mt-0.5 text-[10px] leading-snug text-foreground/80">{locality}</p>
+        {church.phone ? <p className="text-[10px] text-foreground/80">{church.phone}</p> : null}
       </header>
 
-      <p className="mt-6 text-center font-display text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        Prayer intention offering
-      </p>
+      <Rule />
 
-      {/* Customer + prayer */}
-      <div className="mt-6 grid grid-cols-2 gap-6">
-        <Block title="Received from">
-          <Line label="Name" value={customer.name} strong />
-          {customer.mobile ? <Line label="Mobile" value={customer.mobile} /> : null}
-          {customer.email ? <Line label="Email" value={customer.email} /> : null}
-          {customer.addressLine ? (
-            <Line label="Address" value={`${customer.addressLine}${customer.city ? `, ${customer.city}` : ""}`} />
-          ) : null}
-        </Block>
-
-        <Block title="Prayer details">
-          <Line label="Prayer type" value={prayerType.name} strong />
-          <Line label="Offered for" value={intention.prayerFor} />
-          <Line label="Prayer date" value={formatLongDate(intention.prayerDate)} />
-          <Line label="Requested by" value={intention.requestedBy} />
-        </Block>
+      <div className="text-center">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-foreground/70">
+          Official receipt
+        </p>
+        <p className="mt-0.5 font-display text-[13px] font-bold tabular-nums">{receipt.reference}</p>
+        <p className="mt-0.5 text-[10px] text-foreground/70">{formatDate(receipt.issuedAt)}</p>
       </div>
 
-      {intention.message ? (
-        <div className="mt-5 rounded border border-dashed border-border bg-muted/40 px-4 py-3">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Intention
+      <Rule />
+
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+        Prayer intention
+      </p>
+      <p className="mt-0.5 font-semibold">{prayerType.name}</p>
+
+      <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+        Received from
+      </p>
+      <Row label="Name" value={customer.name} />
+      {customer.mobile ? <Row label="Mobile" value={customer.mobile} /> : null}
+
+      <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+        Prayer for
+      </p>
+      <p className="font-semibold">{intention.prayerFor}</p>
+
+      <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+        Prayer date
+      </p>
+      <p>{formatDate(intention.prayerDate)}</p>
+
+      {showRequestedBy ? (
+        <>
+          <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+            Requested by
           </p>
-          <p className="mt-1 text-sm leading-relaxed text-foreground">{intention.message}</p>
-        </div>
+          <p>{requestedBy}</p>
+        </>
       ) : null}
 
-      {/* Payment */}
-      <div className="mt-6 overflow-visible rounded border border-border">
-        <table className="w-full table-fixed border-collapse text-sm">
-          <caption className="sr-only">Payment recorded for this intention</caption>
-          <thead>
-            <tr className="border-b border-border bg-muted/60">
-              <th scope="col" className="w-[40%] px-4 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Description
-              </th>
-              <th scope="col" className="w-[20%] px-4 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Method
-              </th>
-              <th scope="col" className="w-[22%] px-4 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Reference
-              </th>
-              <th scope="col" className="w-[18%] px-4 py-2.5 text-right text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Amount
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-border">
-              <td className="px-4 py-3 align-top">
-                <span className="font-medium text-foreground">{prayerType.name}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  For {intention.prayerFor} · {formatDate(intention.prayerDate)}
-                </span>
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 align-top text-foreground">
-                {PAYMENT_METHOD_LABEL[payment.method]}
-                {payment.provider ? (
-                  <span className="block text-xs text-muted-foreground">{payment.provider}</span>
-                ) : null}
-              </td>
-              <td className="px-4 py-3 align-top text-xs text-foreground [overflow-wrap:normal] [word-break:normal]">
-                {payment.transactionId ?? (payment.method === "CASH" ? "Cash — no reference" : "—")}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-foreground">
-                {formatCurrency(payment.amount)}
-              </td>
-            </tr>
-            <tr className="bg-muted/40">
-              <td colSpan={3} className="px-4 py-3 text-right text-sm font-semibold text-foreground">
-                Total received
-              </td>
-              <td className="px-4 py-3 text-right font-display text-lg font-bold tabular-nums text-primary">
-                {formatCurrency(payment.amount)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <Rule />
 
-      <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-        <p className="text-muted-foreground">
-          Payment status:{" "}
-          <span
-            className={cn(
-              "font-semibold",
-              payment.status === "VERIFIED" && "text-success",
-              payment.status === "PENDING_VERIFICATION" && "text-warning",
-              payment.status === "REJECTED" && "text-destructive",
-            )}
-          >
-            {PAYMENT_STATUS_TEXT[payment.status]}
-          </span>
-          {payment.verifiedAt ? (
-            <span className="text-muted-foreground"> on {formatDateTime(payment.verifiedAt)}</span>
-          ) : null}
-        </p>
-        <p className="text-right text-muted-foreground">
-          This offering was paid directly to the church. No online payment gateway was used.
-        </p>
-      </div>
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+        Payment
+      </p>
+      <Row label="Method" value={PAYMENT_METHOD_LABEL[payment.method]} />
+      <Row label="Description" value={prayerType.name} />
 
-      <div className="mt-auto pt-10">
-      {/* Authorisation */}
-      <div className="grid grid-cols-2 gap-8">
-        <Signature label="Received by" name={receipt.receivedBy?.name ?? "Parish office"} />
-        <Signature
-          label="Authorised by"
-          name={receipt.authorizedBy?.name ?? "Pending verification"}
-          muted={!receipt.authorizedBy}
-        />
-      </div>
+      <Rule />
 
-      <footer className="mt-10 border-t border-border pt-5 text-center">
-        <p className="font-display text-sm font-semibold text-primary">
-          Thank you for your prayer intention.
-        </p>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          May God bless you and your family.
-        </p>
-        <p className="mt-3 text-[0.65rem] text-muted-foreground">
-          {church.name} · Receipt {receipt.reference} · Issued through Hallelujah · This is
-          a computer-generated receipt issued by the parish office.
-        </p>
-      </footer>
-      </div>
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
+        Total received
+      </p>
+      <p className="text-right font-display text-[18px] font-bold tabular-nums text-primary">
+        {formatCurrency(payment.amount)}
+      </p>
+
+      <Rule />
+
+      <p className="text-[10px]">
+        Status:{" "}
+        <span
+          className={cn(
+            "font-semibold",
+            payment.status === "VERIFIED" && "text-success",
+            payment.status === "PENDING_VERIFICATION" && "text-warning",
+            payment.status === "REJECTED" && "text-destructive",
+          )}
+        >
+          {PAYMENT_STATUS_TEXT[payment.status]}
+        </span>
+      </p>
+      <p className="mt-1 text-[10px]">
+        Received By: {receipt.receivedBy?.name ?? "Parish office"}
+      </p>
+
+      <p className="mt-3 text-center font-display text-[11px] font-semibold text-primary">
+        Thank you for your
+        <br />
+        prayer intention!
+      </p>
+
+      <Rule />
+
+      <p className="text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground/70">
+        {church.name}
+      </p>
     </article>
   );
 }
 
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <h3 className="border-b border-border pb-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        {title}
-      </h3>
-      <dl className="mt-2.5 space-y-1.5">{children}</dl>
-    </section>
-  );
+function Rule() {
+  return <hr className="my-2 border-0 border-t border-foreground/70" />;
 }
 
-function Line({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-nowrap gap-3 text-sm">
-      <dt className="w-24 shrink-0 text-muted-foreground">{label}</dt>
-      <dd
-        className={cn(
-          "min-w-0 flex-1 [overflow-wrap:normal] [word-break:normal]",
-          strong ? "font-semibold text-foreground" : "text-foreground",
-        )}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function Signature({ label, name, muted }: { label: string; name: string; muted?: boolean }) {
-  return (
-    <div>
-      <div className="h-12" aria-hidden="true" />
-      <div className="border-t border-foreground/40 pt-1.5">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          {label}
-        </p>
-        <p className={cn("text-sm", muted ? "text-muted-foreground" : "font-medium text-foreground")}>
-          {name}
-        </p>
-      </div>
+    <div className="flex items-start justify-between gap-2">
+      <span className="shrink-0 text-foreground/70">{label}</span>
+      <span className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">{value}</span>
     </div>
   );
 }

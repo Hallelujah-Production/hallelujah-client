@@ -36,9 +36,9 @@ export function CreateUserForm({ churches }: { churches: Pick<ChurchView, "id" |
         <Field id="user-name" label="Full name" required error={state.fields?.name}>
           {(aria) => <Input {...aria} name="name" placeholder="Fr. George Mathew" />}
         </Field>
-        <Field id="user-email" label="Email address" required error={state.fields?.email}>
+        <Field id="user-username" label="Username" required error={state.fields?.username} description="They sign in with this username. Letters, numbers, dots, hyphens, underscores.">
           {(aria) => (
-            <Input {...aria} name="email" type="email" placeholder="admin@st-marys.example.com" />
+            <Input {...aria} name="username" type="text" autoComplete="off" placeholder="fr.george" />
           )}
         </Field>
       </FormRow>
@@ -75,7 +75,7 @@ export function CreateUserForm({ churches }: { churches: Pick<ChurchView, "id" |
           label="Church"
           required
           error={state.fields?.churchId}
-          description="The parish this account is allotted to. They sign in with this email and the password you set. Super Admin can later allot the same person to another church — still one login."
+          description="The parish this account is allotted to. They sign in with this username and the password you set. Super Admin can later allot the same person to another church — still one login."
         >
           {(aria) => (
             <Select {...aria} name="churchId" defaultValue={churches[0]?.id}>

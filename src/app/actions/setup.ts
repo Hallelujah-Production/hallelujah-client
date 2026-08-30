@@ -3,13 +3,14 @@
 import { notFound, redirect } from "next/navigation";
 import { apiGet, apiPost } from "@/lib/api/client";
 import { ApiError, userMessage } from "@/lib/api/errors";
+import { isValidUsername, USERNAME_MESSAGE } from "@/lib/username";
 
 export interface SetupState {
   error?: string;
   fields?: Record<string, string>;
   values?: {
     name?: string;
-    email?: string;
+    username?: string;
   };
 }
 
@@ -32,15 +33,16 @@ export async function createSuperAdminAction(
   formData: FormData,
 ): Promise<SetupState> {
   const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
-  const values = { name, email };
+  const values = { name, username };
   const setupSecret = bffSetupSecret();
 
   const fields: Record<string, string> = {};
   if (!name) fields.name = "Enter your full name.";
-  if (!email) fields.email = "Enter a valid email address.";
+  if (!username) fields.username = "Enter a username for this account.";
+  else if (!isValidUsername(username)) fields.username = USERNAME_MESSAGE;
   if (password.length < 10) fields.password = "Use at least 10 characters.";
   if (password !== confirmPassword) fields.confirmPassword = "Passwords do not match.";
   if (Object.keys(fields).length) {
@@ -51,7 +53,7 @@ export async function createSuperAdminAction(
   try {
     await apiPost(
       "/setup/super-admin",
-      { name, email, password, confirmPassword, setupSecret },
+      { name, username, password, confirmPassword, setupSecret },
       { skipRefresh: true },
     );
   } catch (error) {

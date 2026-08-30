@@ -19,13 +19,13 @@ const initial = { ok: false };
 
 export function UserMenu({
   name,
-  email,
+  username,
   initials,
   roleLabel,
   role,
 }: {
   name: string;
-  email: string;
+  username: string;
   initials: string;
   roleLabel: string;
   role: Role;
@@ -111,7 +111,7 @@ export function UserMenu({
         >
           <div className="border-b border-border px-4 py-3">
             <p className="truncate text-sm font-semibold text-foreground">{name}</p>
-            <p className="truncate text-xs text-muted-foreground">{email}</p>
+            <p className="truncate text-xs text-muted-foreground">{username}</p>
             <p className="mt-1.5 inline-flex rounded-full bg-primary-muted px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-primary">
               {roleLabel}
             </p>

@@ -77,7 +77,7 @@ export function mapChurchView(dto: Record<string, unknown>): ChurchView {
   return {
     ...church,
     adminName: opt(dto.adminName),
-    adminEmail: opt(dto.adminEmail),
+    adminUsername: opt(dto.adminUsername),
     staffCount: Number(dto.staffCount) || 0,
     intentionCount: Number(dto.intentionCount) || 0,
     revenue: paiseToRupees(dto.revenuePaise as number | string | undefined),
@@ -90,7 +90,8 @@ export function mapUser(dto: Record<string, unknown>): User {
     id: str(dto.id),
     churchId: dto.churchId ? str(dto.churchId) : nestedChurch?.id ? str(nestedChurch.id) : null,
     name: str(dto.name),
-    email: str(dto.email),
+    username: str(dto.username),
+    email: opt(dto.email),
     phone: str(dto.phone),
     role: (dto.role as Role) || "CHURCH_STAFF",
     isActive: dto.isActive !== false,

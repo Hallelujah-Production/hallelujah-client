@@ -45,7 +45,7 @@ export function AppShell({
       currentChurchId={currentChurch?.id ?? null}
       user={{
         name: currentUser.name,
-        email: currentUser.email,
+        username: currentUser.username,
         initials: currentUser.avatarInitials,
         role: currentRole,
         roleLabel: WORKSPACE_LABEL[currentRole],

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Mail, Phone } from "lucide-react";
+import { User as UserIcon, Phone } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, DetailList, DetailRow } from "@/components/ui/card";
 import { StatCard, StatGrid } from "@/components/data/stat-card";
@@ -64,8 +64,8 @@ export default async function ProfilePage() {
 
             <ul className="space-y-3 border-t border-border pt-4 text-sm">
               <li className="flex items-center gap-3">
-                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="break-all text-foreground">{user.email}</span>
+                <UserIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="break-all text-foreground">{user.username}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -75,7 +75,7 @@ export default async function ProfilePage() {
 
             <div className="mt-5 rounded-md border border-border bg-muted/40 px-4 py-3">
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Your name and email are managed by your church administrator. You can change your
+                Your name and username are managed by your church administrator. You can change your
                 own password below.
               </p>
               <div className="mt-4">

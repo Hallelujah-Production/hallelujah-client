@@ -5,7 +5,7 @@ import { ForgotPasswordForm } from "./forgot-password-form";
 
 export const metadata: Metadata = {
   title: "Forgot password",
-  description: "Reset your password with your email and recovery code.",
+  description: "Reset your password with your username and recovery code.",
   robots: { index: false, follow: false },
 };
 
@@ -23,8 +23,8 @@ export default function ForgotPasswordPage() {
             Reset Password
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            Enter the email for your account and the recovery code you saved. This page does
-            not confirm whether an email address has an account.
+            Enter the username for your account and the recovery code you saved. This page does
+            not confirm whether a username has an account.
           </p>
           <div className="mt-8">
             <ForgotPasswordForm />

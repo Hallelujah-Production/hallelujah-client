@@ -31,7 +31,7 @@ export default async function NewChurchPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_18rem] xl:items-start">
         <div className="rounded-lg border border-border bg-card p-5 shadow-sm sm:p-7">
-          <CreateChurchForm existingAdmins={admins.data.map((a) => ({ id: a.id, name: a.name, email: a.email }))} />
+          <CreateChurchForm existingAdmins={admins.data.map((a) => ({ id: a.id, name: a.name, username: a.username }))} />
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-24">

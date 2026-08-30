@@ -14,7 +14,7 @@ export function ChurchAdminAssignmentManager({
 }: {
   churchId: string;
   assignedIds: string[];
-  candidates: { id: string; name: string; email: string }[];
+  candidates: { id: string; name: string; username: string }[];
 }) {
   const router = useRouter();
   const [userId, setUserId] = React.useState("");
@@ -52,7 +52,7 @@ export function ChurchAdminAssignmentManager({
                 <option value="">Select a Church Admin…</option>
                 {available.map((admin) => (
                   <option key={admin.id} value={admin.id}>
-                    {admin.name} · {admin.email}
+                    {admin.name} · {admin.username}
                   </option>
                 ))}
               </Select>

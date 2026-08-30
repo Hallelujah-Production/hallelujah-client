@@ -11,6 +11,7 @@ import {
 import { ApiError, userMessage } from "@/lib/api/errors";
 import { getSession } from "@/lib/session";
 import type { Role } from "@/lib/types";
+import { isValidUsername, USERNAME_MESSAGE } from "@/lib/username";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -42,17 +43,17 @@ export async function createTeamMemberAction(
         : session.currentChurch?.id ?? null;
 
   const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const phone = String(formData.get("phone") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (!name) return { status: "error", message: "Enter the person's full name.", fields: { name: "Enter the person's full name." } };
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!isValidUsername(username)) {
     return {
       status: "error",
-      message: "Enter a valid email address for the account.",
-      fields: { email: "Enter a valid email address for the account." },
+      message: USERNAME_MESSAGE,
+      fields: { username: USERNAME_MESSAGE },
     };
   }
   if (password.length < 10) {
@@ -88,7 +89,7 @@ export async function createTeamMemberAction(
   }
 
   const result = await createUser(
-    { name, email, phone, role: requestedRole, churchId, password, confirmPassword },
+    { name, username, phone, role: requestedRole, churchId, password, confirmPassword },
     { role: session.currentRole, churchId: session.currentChurch?.id ?? null },
   );
 
