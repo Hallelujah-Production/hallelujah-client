@@ -77,7 +77,7 @@ export default async function SuperAdminUsersPage({
           </span>
           <span className="min-w-0">
             <span className="block font-medium text-foreground">{row.name}</span>
-            <span className="block truncate text-xs text-muted-foreground">{row.email}</span>
+            <span className="block truncate text-xs text-muted-foreground">{row.username}</span>
           </span>
         </span>
       ),
@@ -151,7 +151,7 @@ export default async function SuperAdminUsersPage({
         <UserAccountActions
           userId={row.id}
           userName={row.name}
-          userEmail={row.email}
+          userEmail={row.username}
           isActive={row.isActive}
           invitationPending={row.invitationPending}
           isSelf={row.id === admin.currentUser.id}
@@ -229,7 +229,7 @@ export default async function SuperAdminUsersPage({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-medium text-foreground">{row.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{row.email}</p>
+                <p className="truncate text-xs text-muted-foreground">{row.username}</p>
               </div>
               <Badge tone={row.invitationPending ? "accent" : row.isActive ? "success" : "neutral"}>
                 {row.invitationPending ? "Needs password" : row.isActive ? "Active" : "Inactive"}
@@ -242,7 +242,7 @@ export default async function SuperAdminUsersPage({
               <UserAccountActions
                 userId={row.id}
                 userName={row.name}
-                userEmail={row.email}
+                userEmail={row.username}
                 isActive={row.isActive}
                 invitationPending={row.invitationPending}
                 isSelf={row.id === admin.currentUser.id}

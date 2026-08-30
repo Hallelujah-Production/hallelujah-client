@@ -21,7 +21,7 @@ export function AuthenticatedChrome({
   identity: WorkspaceIdentity;
   sections: NavSection[];
   role: Role;
-  user: { name: string; email: string; initials: string; role: Role; roleLabel: string };
+  user: { name: string; username: string; initials: string; role: Role; roleLabel: string };
   assignedChurches?: { id: string; name: string }[];
   currentChurchId?: string | null;
   children: React.ReactNode;

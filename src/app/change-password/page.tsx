@@ -39,7 +39,7 @@ export default async function ChangePasswordPage() {
             Choose a new password
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            An administrator set the password for {session.currentUser.email}. Enter that
+            An administrator set the password for {session.currentUser.username}. Enter that
             password, then choose one only you know before opening the workspace.
           </p>
           <div className="mt-8">

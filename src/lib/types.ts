@@ -82,7 +82,8 @@ export interface User {
   id: string;
   churchId: string | null; // null => platform-level (SUPER_ADMIN)
   name: string;
-  email: string;
+  username: string;
+  email?: string | null;
   phone: string;
   role: Role;
   isActive: boolean;
@@ -334,7 +335,7 @@ export interface UserView extends User {
 
 export interface ChurchView extends Church {
   adminName?: string;
-  adminEmail?: string;
+  adminUsername?: string;
   staffCount: number;
   intentionCount: number;
   revenue: number;

@@ -9,7 +9,7 @@ import type { Role } from "@/lib/types";
 
 export interface LoginState {
   error?: string;
-  email?: string;
+  username?: string;
   /** Set on success so the client can navigate. Server `redirect()` waits for the destination RSC. */
   next?: string;
 }
@@ -18,28 +18,28 @@ export async function signInAction(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  if (!email) return { error: "Enter the email address for your church account.", email };
-  if (!password) return { error: "Enter your password.", email };
+  if (!username) return { error: "Enter the username for your church account.", username };
+  if (!password) return { error: "Enter your password.", username };
 
   const started = Date.now();
   try {
     const { data } = await apiPost<{
       user: { role: Role };
       mustChangePassword?: boolean;
-    }>("/auth/login", { email, password }, { skipRefresh: true });
+    }>("/auth/login", { username, password }, { skipRefresh: true });
 
     if (process.env.NODE_ENV === "development") {
       console.info(`[auth] login action ${Date.now() - started}ms next=${landingRouteForRole(data.user.role)}`);
     }
 
     const next = data.mustChangePassword ? "/change-password" : landingRouteForRole(data.user.role);
-    return { next, email };
+    return { next, username };
   } catch (error) {
     if (error instanceof ApiError) {
-      return { error: userMessage(error, "Invalid email or password."), email };
+      return { error: userMessage(error, "Invalid username or password."), username };
     }
     throw error;
   }
@@ -67,15 +67,15 @@ export async function forgotPasswordAction(
   _prev: ForgotState,
   formData: FormData,
 ): Promise<ForgotState> {
-  const email = String(formData.get("email") ?? "").trim();
-  if (!email) return { status: "error", message: "Enter the email address for your account." };
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
+  if (!username) return { status: "error", message: "Enter the username for your account." };
   try {
-    const { message } = await apiPost<{ ok: true }>("/auth/forgot-password", { email }, {
+    const { message } = await apiPost<{ ok: true }>("/auth/forgot-password", { username }, {
       skipRefresh: true,
     });
     return {
       status: "success",
-      message: message ?? "If that email address has an account, a reset link is on its way.",
+      message: message ?? "If that username has an account, follow the next step with your recovery code.",
     };
   } catch (error) {
     if (error instanceof ApiError) return { status: "error", message: userMessage(error) };
@@ -93,11 +93,11 @@ export async function recoveryResetAction(
   _prev: ResetState,
   formData: FormData,
 ): Promise<ResetState> {
-  const email = String(formData.get("email") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim().toLowerCase();
   const recoveryCode = String(formData.get("recoveryCode") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
-  if (!email) return { status: "error", message: "Enter the email address for your account." };
+  if (!username) return { status: "error", message: "Enter the username for your account." };
   if (!recoveryCode) return { status: "error", message: "Enter your recovery code." };
   if (password.length < 10) {
     return { status: "error", message: "Use at least 10 characters." };
@@ -108,7 +108,7 @@ export async function recoveryResetAction(
   try {
     const { data, message } = await apiPost<{ recoveryCode: string }>(
       "/auth/recovery/reset",
-      { email, recoveryCode, password, confirmPassword },
+      { username, recoveryCode, password, confirmPassword },
       { skipRefresh: true },
     );
     return {
@@ -152,7 +152,7 @@ export async function setPasswordAction(
     );
     return {
       status: "success",
-      message: "Password created successfully. Sign in with your email and this password.",
+      message: "Password created successfully. Sign in with your username and this password.",
     };
   } catch (error) {
     if (error instanceof ApiError) return { status: "error", message: userMessage(error) };

@@ -88,7 +88,7 @@ export function ResetPasswordDialog({
         </div>
         {userEmail ? (
           <div className="mt-1.5 flex justify-between gap-3">
-            <dt className="text-muted-foreground">Email</dt>
+            <dt className="text-muted-foreground">Username</dt>
             <dd className="min-w-0 break-all text-right text-foreground">{userEmail}</dd>
           </div>
         ) : null}

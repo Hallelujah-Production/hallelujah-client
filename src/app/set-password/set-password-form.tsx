@@ -39,7 +39,7 @@ export function SetPasswordForm({
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {churchName
-              ? `Your ${roleLabel ?? "account"} password for ${churchName} is ready. Sign in with your email and this password to open the parish workspace.`
+              ? `Your ${roleLabel ?? "account"} password for ${churchName} is ready. Sign in with your username and this password to open the parish workspace.`
               : "Your password is ready. Sign in with your email and this password."}
           </p>
         </div>

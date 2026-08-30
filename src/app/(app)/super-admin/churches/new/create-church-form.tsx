@@ -16,7 +16,7 @@ const initialState: ChurchFormState = { status: "idle" };
 export function CreateChurchForm({
   existingAdmins,
 }: {
-  existingAdmins: { id: string; name: string; email: string }[];
+  existingAdmins: { id: string; name: string; username: string }[];
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(createChurchAction, initialState);
@@ -157,7 +157,7 @@ export function CreateChurchForm({
                 <option value="">Select a Church Admin…</option>
                 {existingAdmins.map((admin) => (
                   <option key={admin.id} value={admin.id}>
-                    {admin.name} · {admin.email}
+                    {admin.name} · {admin.username}
                   </option>
                 ))}
               </Select>
@@ -169,9 +169,9 @@ export function CreateChurchForm({
               <Field id="admin-name" label="Administrator name" required error={errors.adminName}>
                 {(aria) => <Input {...aria} name="adminName" placeholder="Fr. George Mathew" />}
               </Field>
-              <Field id="admin-email" label="Administrator email" required error={errors.adminEmail}>
+              <Field id="admin-username" label="Administrator username" required error={errors.adminUsername} description="They sign in with this username.">
                 {(aria) => (
-                  <Input {...aria} name="adminEmail" type="email" placeholder="admin@stannes.example.com" />
+                  <Input {...aria} name="adminUsername" type="text" autoComplete="off" placeholder="stannes.admin" />
                 )}
               </Field>
             </FormRow>

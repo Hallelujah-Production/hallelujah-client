@@ -4,8 +4,8 @@ import { Printer } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 
 /**
- * Triggers the browser's own print dialog. Print CSS keeps the receipt layout
- * the same as on screen (two columns, no mid-word wraps) and hides chrome.
+ * Triggers the browser's own print dialog. Print CSS keeps the 80mm thermal
+ * receipt and hides application chrome.
  */
 export function PrintButton({
   label = "Print Receipt",
@@ -14,7 +14,10 @@ export function PrintButton({
   return (
     <Button
       {...props}
-      onClick={() => window.print()}
+      onClick={() => {
+        window.dispatchEvent(new Event("beforeprint"));
+        window.print();
+      }}
       className={props.className}
       data-print="hide"
     >

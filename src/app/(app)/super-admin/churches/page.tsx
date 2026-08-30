@@ -67,7 +67,7 @@ export default async function SuperAdminChurchesPage({
         row.adminName ? (
           <span>
             <span className="block">{row.adminName}</span>
-            <span className="block text-xs text-muted-foreground">{row.adminEmail}</span>
+            <span className="block text-xs text-muted-foreground">{row.adminUsername}</span>
           </span>
         ) : (
           <span className="text-muted-foreground">Not assigned</span>

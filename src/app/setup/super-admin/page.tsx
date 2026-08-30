@@ -129,7 +129,7 @@ export default async function SuperAdminSetupPage() {
               </p>
               <p className="mx-auto mt-2 max-w-[22rem] text-center text-xs leading-relaxed text-muted-foreground">
                 This is the first account on {PLATFORM_NAME}. After it is created, this page
-                closes. Sign in with the same email and password.
+                closes. Sign in with the same username and password.
               </p>
               <div className="mt-4">
                 <SetupForm />

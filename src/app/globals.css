@@ -239,7 +239,10 @@
   }
 }
 
-/* ---------- Print: official receipt locked to ISO A4 210mm × 297mm ---------- */
+/* ---------- Print: reports stay A4; receipts use an 80mm thermal roll ---------- */
+/* Receipt screens inject a measured page box. Chrome ignores size: 80mm auto
+   and falls back to A4/Letter, so do not attach a named page with auto height. */
+
 @media print {
   @page {
     size: A4 portrait;
@@ -247,15 +250,13 @@
   }
 
   /*
-    Chrome rasterizes (blurs) print output when:
-    - a scroll container (overflow: auto/clip) wraps the sheet
-    - html/body are overflow:hidden at a fixed 297mm and content is 1px over,
-      which triggers shrink-to-fit at screen DPI
-    Keep the sheet as real HTML/CSS at 100% scale.
+    Chrome rasterizes (blurs) print output when a scroll container wraps the
+    sheet or overflow is hidden at a fixed page height. Keep content at 100%
+    scale and never lock receipt height to A4 or to the physical roll diameter.
   */
   html,
   body {
-    width: 210mm !important;
+    width: auto !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
@@ -280,7 +281,7 @@
     display: none !important;
   }
 
-  /* Sidebar is hidden, but its offset would squeeze the receipt off A4. */
+  /* Sidebar is hidden; drop its offset so only the receipt remains. */
   .lg\:pl-64 {
     padding-left: 0 !important;
   }
@@ -289,7 +290,7 @@
     padding: 0 !important;
     margin: 0 !important;
     max-width: none !important;
-    width: 210mm !important;
+    width: auto !important;
     overflow: visible !important;
   }
 
@@ -297,30 +298,39 @@
     margin-top: 0 !important;
   }
 
+  html[data-print-mode="thermal"],
+  html[data-print-mode="thermal"] body,
+  html[data-print-mode="thermal"] main {
+    width: 80mm !important;
+    max-width: 80mm !important;
+  }
+
+  html[data-print-mode="thermal"] button {
+    display: none !important;
+  }
+
   [data-print="area"] {
-    display: flex !important;
-    flex-direction: column !important;
+    display: block !important;
     position: static !important;
     box-sizing: border-box !important;
     margin: 0 auto !important;
-    width: 210mm !important;
-    min-width: 210mm !important;
-    max-width: 210mm !important;
-    height: 297mm !important;
-    min-height: 297mm !important;
-    max-height: 297mm !important;
-    padding: 12mm !important;
+    width: 80mm !important;
+    min-width: 80mm !important;
+    max-width: 80mm !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 2.5mm !important;
     box-shadow: none !important;
-    /* Outer card chrome is screen-only; internals keep their borders below. */
     border-width: 0 !important;
     background: #fff !important;
     overflow: visible !important;
-    break-inside: avoid;
-    page-break-inside: avoid;
-    page-break-after: avoid;
-    overflow-wrap: normal;
-    word-break: normal;
-    hyphens: none;
+    break-inside: auto;
+    page-break-inside: auto;
+    page-break-after: auto;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: manual;
     filter: none !important;
     transform: none !important;
     opacity: 1 !important;
@@ -344,9 +354,9 @@
   [data-print="area"] dt,
   [data-print="area"] p,
   [data-print="area"] address {
-    overflow-wrap: normal;
-    word-break: normal;
-    hyphens: none;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: manual;
   }
 
   /*
@@ -372,7 +382,8 @@
 
   [data-print="area"] img {
     break-inside: avoid;
-    max-width: none;
+    max-width: 100%;
+    height: auto;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

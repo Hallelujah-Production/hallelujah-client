@@ -24,12 +24,12 @@ export function LoginForm({ created = false }: { created?: boolean }) {
   const [state, formAction, pending] = useActionState(signInAction, initialState);
   const busy = pending || Boolean(state.next);
   const [showPassword, setShowPassword] = React.useState(false);
-  const [email, setEmail] = React.useState("");
+  const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
 
   React.useEffect(() => {
-    if (state.email) setEmail(state.email);
-  }, [state.email]);
+    if (state.username) setUsername(state.username);
+  }, [state.username]);
 
   React.useEffect(() => {
     if (pending) {
@@ -61,7 +61,7 @@ export function LoginForm({ created = false }: { created?: boolean }) {
           role="status"
           className="rounded-md border border-primary/20 bg-primary-muted px-4 py-3 text-sm text-foreground"
         >
-          Your Super Admin account is ready. Sign in with the email and password you just created.
+          Your Super Admin account is ready. Sign in with the username and password you just created.
         </p>
       ) : null}
 
@@ -75,17 +75,17 @@ export function LoginForm({ created = false }: { created?: boolean }) {
         </p>
       ) : null}
 
-      <Field id="email" label="Email address" required>
+      <Field id="username" label="Username" required>
         {(aria) => (
           <Input
             {...aria}
-            name="email"
-            type="email"
+            name="username"
+            type="text"
             autoComplete="username"
             autoFocus
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="fr.joseph"
           />
         )}
       </Field>

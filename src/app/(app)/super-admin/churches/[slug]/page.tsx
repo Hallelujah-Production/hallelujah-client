@@ -238,7 +238,7 @@ function AdminSection({
       <ChurchAdminAssignmentManager
         churchId={churchId}
         assignedIds={assigned.map((a) => a.id)}
-        candidates={candidates.map((c) => ({ id: c.id, name: c.name, email: c.email }))}
+        candidates={candidates.map((c) => ({ id: c.id, name: c.name, username: c.username }))}
       />
 
       {assigned.length === 0 ? (
@@ -260,7 +260,7 @@ function AdminSection({
                 </CardHeader>
                 <CardContent>
                   <DetailList>
-                    <DetailRow label="Email">{admin.email}</DetailRow>
+                    <DetailRow label="Username">{admin.username}</DetailRow>
                     <DetailRow label="Phone">{admin.phone || "Not provided"}</DetailRow>
                     <DetailRow label="Scope">
                       Assigned to {churchName}. They may also administer other parishes you have given them.
