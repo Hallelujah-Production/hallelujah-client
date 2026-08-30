@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { assertChurchSession } from "@/lib/guards";
-import { getSession } from "@/lib/session";
+import { getSession, peekRole } from "@/lib/session";
 import {
   getDashboardStats,
   getIntentions,
@@ -23,22 +23,37 @@ export const metadata: Metadata = {
  * Church Admin lands on Create Intention. Staff lands here as a prayer queue.
  * Role still decides the experience — never the URL.
  *
- * Staff queue starts in parallel with /auth/me so login is not an auth → data waterfall.
+ * Data starts in parallel with /auth/me so this is not an auth → data
+ * waterfall, and the cookie's role claim decides *which* calls to start: firing
+ * both sets meant every dashboard load sent the API two or three requests whose
+ * only possible answer was 403. `assertChurchSession` below still decides what
+ * is rendered, from the session the API returned.
  */
 export default async function DashboardPage() {
   const sessionPromise = getSession();
-  const adminStatsP = ignoreForbidden(getDashboardStats(""));
-  const scheduleP = ignoreForbidden(getPrayerSchedule(""));
-  const awaitingP = ignoreForbidden(
-    getIntentions("", { paymentStatus: "PENDING_VERIFICATION", limit: 5 }),
-  );
-  const staffQueueP = ignoreForbidden(getStaffIntentions("", "", "queue", { limit: 100 }));
-  const staffStatsP = ignoreForbidden(getStaffStats("", ""));
+  const claimedRole = await peekRole();
+  const maybeAdmin = claimedRole !== "CHURCH_STAFF";
+  const maybeStaff = claimedRole !== "CHURCH_ADMIN" && claimedRole !== "SUPER_ADMIN";
+
+  const adminStatsP = maybeAdmin ? ignoreForbidden(getDashboardStats("")) : null;
+  const scheduleP = maybeAdmin ? ignoreForbidden(getPrayerSchedule("")) : null;
+  const awaitingP = maybeAdmin
+    ? ignoreForbidden(getIntentions("", { paymentStatus: "PENDING_VERIFICATION", limit: 5 }))
+    : null;
+  const staffQueueP = maybeStaff
+    ? ignoreForbidden(getStaffIntentions("", "", "queue", { limit: 100 }))
+    : null;
+  const staffStatsP = maybeStaff ? ignoreForbidden(getStaffStats("", "")) : null;
 
   const session = assertChurchSession(await sessionPromise);
 
   if (session.currentRole === "CHURCH_ADMIN") {
-    const [stats, schedule, awaiting] = await Promise.all([adminStatsP, scheduleP, awaitingP]);
+    const [stats, schedule, awaiting] = await Promise.all([
+      adminStatsP ?? ignoreForbidden(getDashboardStats("")),
+      scheduleP ?? ignoreForbidden(getPrayerSchedule("")),
+      awaitingP ??
+        ignoreForbidden(getIntentions("", { paymentStatus: "PENDING_VERIFICATION", limit: 5 })),
+    ]);
     return (
       <Suspense fallback={<DashboardLoading />}>
         <AdminDashboard
@@ -51,7 +66,10 @@ export default async function DashboardPage() {
     );
   }
 
-  const [assigned, stats] = await Promise.all([staffQueueP, staffStatsP]);
+  const [assigned, stats] = await Promise.all([
+    staffQueueP ?? ignoreForbidden(getStaffIntentions("", "", "queue", { limit: 100 })),
+    staffStatsP ?? ignoreForbidden(getStaffStats("", "")),
+  ]);
 
   return (
     <Suspense fallback={<DashboardLoading />}>

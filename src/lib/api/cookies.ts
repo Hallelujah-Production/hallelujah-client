@@ -164,3 +164,26 @@ export function isAccessJwtExpired(token: string | undefined, skewMs = 0): boole
     return true;
   }
 }
+
+/**
+ * Role claim from the access JWT, without a call to the API.
+ *
+ * Only for deciding which requests are worth *starting*. It is unverified — the
+ * signature is not checked here and never will be — so nothing may be shown or
+ * withheld on the strength of it. The guards still take the role from
+ * `/auth/me`, and Nest re-authorises every request either way; reading it early
+ * just stops a page firing three requests it is about to discard as 403.
+ */
+export function peekAccessRole(token: string | undefined): string | null {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const padded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
+    const payload = JSON.parse(atob(padded + pad)) as { role?: unknown };
+    return typeof payload.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
+}

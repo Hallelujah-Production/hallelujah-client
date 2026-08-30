@@ -1,12 +1,53 @@
 import "server-only";
 
 import { cache } from "react";
+import { cookies, headers } from "next/headers";
 import { apiGet, hasSessionCookie } from "@/lib/api/client";
+import {
+  ACCESS_COOKIE,
+  parseCookieHeader,
+  peekAccessRole,
+  SESSION_COOKIE_HEADER,
+} from "@/lib/api/cookies";
 import { mapChurch, mapUser } from "@/lib/api/adapters";
 import { ApiError } from "@/lib/api/errors";
 import type { Church, Role, User } from "@/lib/types";
 
 export const SESSION_COOKIE = "gundala_at";
+
+/**
+ * The role the access cookie claims, read locally.
+ *
+ * A page uses this to decide which requests to *start*, so a Church Admin does
+ * not also fire the two staff-only calls (and a staff member the three
+ * admin-only ones) purely to discard them as 403 a second later — five requests
+ * to the API where three were wanted, all of them contending for the same
+ * instance. What is actually rendered still comes from `getSession()`, and Nest
+ * re-authorises every one of these calls regardless, so a forged claim here
+ * buys nothing but a wasted request.
+ *
+ * Returns null when the cookie is missing or unreadable; callers should then
+ * fall back to starting whatever they might need.
+ */
+export const peekRole = cache(async (): Promise<Role | null> => {
+  const store = await cookies();
+  let token = store.get(ACCESS_COOKIE)?.value;
+  try {
+    // Middleware may have rotated the cookie for this very request; its value
+    // arrives on a header, and the store still holds the spent one.
+    const forwarded = (await headers()).get(SESSION_COOKIE_HEADER);
+    if (forwarded) {
+      const rotated = parseCookieHeader(forwarded).get(ACCESS_COOKIE);
+      if (rotated) token = rotated;
+    }
+  } catch {
+    // headers() is unavailable outside a request.
+  }
+  const role = peekAccessRole(token);
+  return role === "SUPER_ADMIN" || role === "CHURCH_ADMIN" || role === "CHURCH_STAFF"
+    ? role
+    : null;
+});
 
 export interface Session {
   currentUser: User;

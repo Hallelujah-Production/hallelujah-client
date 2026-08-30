@@ -142,7 +142,6 @@ function CounterIntentionFormInner({
                 <PrayerIcon icon={type.icon} index={index} size="sm" />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-foreground">{prayerTypeLabel(type)}</span>
-                  <span className="block text-xs text-muted-foreground">{formatCurrency(type.suggestedAmount)}</span>
                 </span>
               </button>
             );
