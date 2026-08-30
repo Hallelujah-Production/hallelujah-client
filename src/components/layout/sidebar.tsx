@@ -25,6 +25,9 @@ export interface BadgeCounts {
 function isActive(pathname: string, item: NavItem): boolean {
   const href = item.href.split("?")[0];
   if (pathname === href) return true;
+  if (item.exclude?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    return false;
+  }
   if (item.match?.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
     return true;
   }

@@ -43,7 +43,6 @@ export function StaffPrayerQueue({
   const [notNowIds, setNotNowIds] = React.useState<Set<string>>(() => new Set());
   const [completedIds, setCompletedIds] = React.useState<Set<string>>(() => new Set());
   const [index, setIndex] = React.useState(0);
-  const [pendingId, setPendingId] = React.useState<string | null>(null);
   const scrollerRef = React.useRef<HTMLDivElement>(null);
   const skipScrollSync = React.useRef(false);
 
@@ -105,32 +104,39 @@ export function StaffPrayerQueue({
     scrollTo(clamped);
   };
 
+  /**
+   * Marks the card done immediately and confirms with the server afterwards.
+   *
+   * Staff work through this queue one prayer at a time, so waiting for the
+   * round trip before the card moves meant every tap felt like the app had
+   * stalled. `completedIds` already drives both the queue filter and the
+   * `awaitingSync` count, so the optimistic state is the same state the server
+   * confirms a moment later — and a failure puts the card back and says why.
+   */
   const completeFocused = () => {
-    if (!focused || !canComplete(focused) || pendingId) return;
+    if (!focused || !canComplete(focused)) return;
     const intention = focused;
-    setPendingId(intention.id);
+    setCompletedIds((ids) => new Set(ids).add(intention.id));
     void (async () => {
       const result = await completeIntentionAction(intention.id);
       if (result.status !== "success") {
-        setPendingId(null);
+        setCompletedIds((ids) => {
+          const next = new Set(ids);
+          next.delete(intention.id);
+          return next;
+        });
         notifyResult(result, {
           successTitle: "Prayer completed",
           errorTitle: "Unable to complete this prayer",
         });
         return;
       }
-      setCompletedIds((ids) => {
-        const next = new Set(ids);
-        next.add(intention.id);
-        return next;
-      });
-      setPendingId(null);
       router.refresh();
     })();
   };
 
   const notNowFocused = () => {
-    if (!focused || pendingId) return;
+    if (!focused) return;
     const moved = focused;
     setNotNowIds((ids) => {
       const next = new Set(ids);
@@ -187,7 +193,6 @@ export function StaffPrayerQueue({
               intention={intention}
               index={i}
               isFocused={i === index}
-              pending={pendingId === intention.id}
               onNotNow={notNowFocused}
               onComplete={completeFocused}
             />
@@ -305,14 +310,12 @@ function CurrentPrayerCard({
   intention,
   index,
   isFocused,
-  pending,
   onNotNow,
   onComplete,
 }: {
   intention: IntentionView;
   index: number;
   isFocused: boolean;
-  pending: boolean;
   onNotNow: () => void;
   onComplete: () => void;
 }) {
@@ -353,7 +356,7 @@ function CurrentPrayerCard({
           variant="outline"
           className="h-12 text-sm sm:h-14 sm:text-base"
           onClick={onNotNow}
-          disabled={!isFocused || pending}
+          disabled={!isFocused}
         >
           <X className="h-4 w-4" aria-hidden="true" />
           Not Now
@@ -363,10 +366,10 @@ function CurrentPrayerCard({
           variant="success"
           className="h-12 text-sm font-semibold sm:h-14 sm:text-base"
           onClick={onComplete}
-          disabled={!isFocused || !completeEnabled || pending}
+          disabled={!isFocused || !completeEnabled}
         >
           <Check className="h-4 w-4" aria-hidden="true" />
-          {pending ? "Saving…" : "Complete"}
+          Complete
         </Button>
       </div>
       {!completeEnabled ? (

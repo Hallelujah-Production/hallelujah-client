@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { PLATFORM_LOGO, PLATFORM_LOGO_HEIGHT, PLATFORM_LOGO_WIDTH, PLATFORM_NAME } from "@/lib/brand";
+import { PLATFORM_LOGO, PLATFORM_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 const ACCENTS = {
@@ -50,7 +50,7 @@ const LOGO_BOX: Record<"sm" | "md" | "nav" | "lg" | "xl", { className: string; p
   xl: { className: "h-44 w-44", px: 176 },
 };
 
-/** Platform crest (`church logo2.png`) plus the Hallelujah name. */
+/** Platform crest (receipt logo) plus the Hallelujah name. */
 export function BrandMark({
   className,
   tone = "dark",
@@ -66,17 +66,19 @@ export function BrandMark({
 
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-3", size === "xl" && "flex-col items-start gap-4", className)}>
-      <Image
-        src={PLATFORM_LOGO}
-        alt={showName ? "" : PLATFORM_NAME}
-        width={PLATFORM_LOGO_WIDTH}
-        height={PLATFORM_LOGO_HEIGHT}
-        sizes={`${box.px * 2}px`}
-        quality={100}
-        unoptimized
-        priority
-        className={cn("shrink-0 object-contain", box.className)}
-      />
+      <span className={cn("relative inline-block shrink-0 overflow-hidden", box.className)}>
+        <Image
+          src={PLATFORM_LOGO}
+          alt={showName ? "" : PLATFORM_NAME}
+          width={box.px}
+          height={box.px}
+          sizes={`${box.px}px`}
+          quality={90}
+          unoptimized
+          priority
+          className="h-full w-full object-contain"
+        />
+      </span>
       {showName ? (
         <span className="flex min-w-0 flex-col overflow-hidden leading-none">
           <span

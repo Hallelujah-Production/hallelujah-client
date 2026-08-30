@@ -25,6 +25,8 @@ export interface NavItem {
   icon: IconKey;
   /** Marks the section active for nested routes. */
   match?: string[];
+  /** Nested paths that belong to another item (e.g. Create Intention). */
+  exclude?: string[];
   badge?: "notifications" | "paymentsPending";
   description?: string;
 }
@@ -62,6 +64,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
           href: "/intentions",
           icon: "intentions",
           match: ["/intentions"],
+          exclude: ["/intentions/new"],
         },
         { label: "Families", href: "/customers", icon: "customers", match: ["/customers"] },
       ],
@@ -164,7 +167,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
 export const MOBILE_TABS: Record<Role, NavItem[]> = {
   CHURCH_ADMIN: [
     { label: "Create", href: "/intentions/new", icon: "intentions" },
-    { label: "Intentions", href: "/intentions", icon: "intentions", match: ["/intentions"] },
+    { label: "Intentions", href: "/intentions", icon: "intentions", match: ["/intentions"], exclude: ["/intentions/new"] },
     { label: "Payments", href: "/payments", icon: "payments", match: ["/payments"] },
     { label: "Alerts", href: "/notifications", icon: "bell", badge: "notifications" },
   ],
