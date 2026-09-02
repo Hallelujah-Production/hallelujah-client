@@ -19,7 +19,7 @@ import { assertChurchAdmin } from "@/lib/guards";
 import { getSession } from "@/lib/session";
 import { getAssignableStaff, getIntentionRegister, getPrayerTypes } from "@/lib/services";
 import type { IntentionQuery, IntentionStatus, IntentionView, PaymentStatus } from "@/lib/types";
-import { first, formatCurrency, formatDate, formatPrayerDuration, readNumberParam } from "@/lib/utils";
+import { first, formatCurrency, formatDate, formatPrayerDuration, readNumberParam, prayerTypeNames} from "@/lib/utils";
 import { IntentionRowActions } from "./intention-row-actions";
 
 export const metadata: Metadata = {
@@ -109,7 +109,7 @@ export default async function IntentionsPage({
     {
       key: "type",
       header: "Prayer type",
-      cell: (row) => row.prayerType.name,
+      cell: (row) => prayerTypeNames(row),
     },
     {
       key: "for",
@@ -276,7 +276,7 @@ export default async function IntentionsPage({
                   {row.prayerFor}
                 </Link>
                 <p className="text-xs text-muted-foreground">
-                  {row.reference} · {row.prayerType.name}
+                  {row.reference} · {prayerTypeNames(row)}
                 </p>
               </div>
               <StatusBadge status={row.status} />

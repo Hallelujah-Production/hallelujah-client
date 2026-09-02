@@ -302,3 +302,20 @@ export function readEnumParam<T extends string>(
 export function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
+
+/**
+ * The prayer types an intention names, as one label.
+ *
+ * An intention can be offered for several occasions at once — a birthday and a
+ * thanksgiving paid for together — so every screen that used to print a single
+ * type prints all of them. Falls back to the primary type when the list is
+ * absent, which is what an older cached response or a stub carries.
+ */
+export function prayerTypeNames(intention: {
+  prayerTypes?: { name: string }[];
+  prayerType?: { name: string };
+}): string {
+  const names = (intention.prayerTypes ?? []).map((type) => type.name).filter(Boolean);
+  if (names.length) return names.join(", ");
+  return intention.prayerType?.name ?? "";
+}

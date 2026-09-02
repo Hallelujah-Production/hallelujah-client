@@ -10,7 +10,7 @@ import { assertChurchStaff } from "@/lib/guards";
 import { getSession } from "@/lib/session";
 import { getStaffIntentions, getStaffStats } from "@/lib/services";
 import type { IntentionView } from "@/lib/types";
-import { first, formatDate, formatDateTime, formatPrayerDuration, readNumberParam } from "@/lib/utils";
+import { first, formatDate, formatDateTime, formatPrayerDuration, readNumberParam, prayerTypeNames} from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Completed prayers",
@@ -41,7 +41,7 @@ export default async function CompletedPage({
       header: "Receipt",
       cell: (row) => <span className="tabular-nums">{row.reference}</span>,
     },
-    { key: "type", header: "Prayer type", cell: (row) => row.prayerType.name },
+    { key: "type", header: "Prayer type", cell: (row) => prayerTypeNames(row) },
     { key: "for", header: "Prayer for", cell: (row) => row.prayerFor },
     {
       key: "date",
@@ -116,7 +116,7 @@ export default async function CompletedPage({
               {row.prayerFor}
             </Link>
             <p className="text-xs text-muted-foreground">
-              {row.prayerType.name} · {row.reference}
+              {prayerTypeNames(row)} · {row.reference}
             </p>
             <p className="border-t border-border pt-2 text-xs text-muted-foreground">
               Offered {formatPrayerDuration(row.startedAt, row.completedAt)}

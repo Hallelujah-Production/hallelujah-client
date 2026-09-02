@@ -17,7 +17,7 @@ import {
   getCustomerReceipts,
 } from "@/lib/services";
 import type { IntentionView, PaymentView, ReceiptView } from "@/lib/types";
-import { formatCurrency, formatDate, formatDateTime, initials } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime, initials, prayerTypeNames} from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Family",
@@ -43,7 +43,7 @@ export default async function CustomerDetailPage({
 
   const intentionColumns: Column<IntentionView>[] = [
     { key: "reference", header: "Receipt", cell: (r) => <span className="tabular-nums">{r.reference}</span> },
-    { key: "type", header: "Prayer type", cell: (r) => r.prayerType.name },
+    { key: "type", header: "Prayer type", cell: (r) => prayerTypeNames(r) },
     { key: "for", header: "Prayer for", cell: (r) => r.prayerFor, hideBelow: "lg" },
     { key: "date", header: "Prayer date", cell: (r) => formatDate(r.prayerDate) },
     {
@@ -83,7 +83,7 @@ export default async function CustomerDetailPage({
   const receiptColumns: Column<ReceiptView>[] = [
     { key: "reference", header: "Receipt", cell: (r) => <span className="tabular-nums">{r.reference}</span> },
     { key: "issued", header: "Issued", cell: (r) => formatDateTime(r.issuedAt) },
-    { key: "prayer", header: "Prayer", cell: (r) => r.prayerType.name, hideBelow: "lg" },
+    { key: "prayer", header: "Prayer", cell: (r) => prayerTypeNames(r), hideBelow: "lg" },
     {
       key: "amount",
       header: "Amount",
