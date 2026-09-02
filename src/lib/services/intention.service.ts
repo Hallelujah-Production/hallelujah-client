@@ -257,6 +257,8 @@ export async function getStaffIntentionById(
 export interface CreateIntentionInput {
   churchId: string;
   prayerTypeId: string;
+  /** Every type chosen, primary first. Falls back to `prayerTypeId` when absent. */
+  prayerTypeIds?: string[];
   prayerFor: string;
   requestedBy: string;
   prayerDate: string;
@@ -356,6 +358,9 @@ export async function createIntention(input: CreateIntentionInput): Promise<Crea
     customerId: input.customer.id,
     customer: input.customer.id ? undefined : customer,
     prayerTypeId: input.prayerTypeId,
+    // The counter sends every type the family is offering for. The public page
+    // still sends one, and the API accepts either.
+    prayerTypeIds: input.prayerTypeIds?.length ? input.prayerTypeIds : undefined,
     prayerFor: input.prayerFor.trim(),
     requestedBy: input.requestedBy?.trim() || customer.name,
     prayerDate: input.prayerDate,

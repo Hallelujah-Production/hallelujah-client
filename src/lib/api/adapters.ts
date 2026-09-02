@@ -21,6 +21,7 @@ import type {
   Role,
   User,
   UserView,
+  IntentionPrayerType,
 } from "@/lib/types";
 
 function str(value: unknown, fallback = ""): string {
@@ -309,11 +310,42 @@ export function mapIntention(dto: Record<string, unknown>, church?: Church | nul
     updatedAt: asIso(dto.updatedAt as string | Date | undefined),
     customer: mapCustomer(customerDto, str(dto.churchId)),
     prayerType: mapPrayerType({ ...prayerDto, amountPaise: dto.amountPaise }),
+    prayerTypes: mapIntentionPrayerTypes(dto, prayerDto),
     payment,
     assignedStaff: staffDto ? mapUser(staffDto) : undefined,
     church: churchResolved,
     createdByName: opt(dto.createdByName),
   };
+}
+
+/**
+ * The prayer types on an intention, primary first.
+ *
+ * The API always sends `prayerTypes`, but an older cached response or a stub
+ * may not, so the primary type stands in. Callers can then render this list
+ * unconditionally instead of choosing between two shapes.
+ */
+function mapIntentionPrayerTypes(
+  dto: Record<string, unknown>,
+  prayerDto: Record<string, unknown>,
+): IntentionPrayerType[] {
+  const rows = Array.isArray(dto.prayerTypes) ? (dto.prayerTypes as Record<string, unknown>[]) : [];
+  if (rows.length) {
+    return rows.map((row) => ({
+      id: str(row.id),
+      code: str(row.code),
+      name: str(row.name),
+      amount: paiseToRupees(row.amountPaise as number | string | undefined),
+    }));
+  }
+  return [
+    {
+      id: str(prayerDto.id),
+      code: str(prayerDto.code),
+      name: str(prayerDto.name),
+      amount: paiseToRupees(dto.amountPaise as number | string | undefined),
+    },
+  ];
 }
 
 export function mapReceiptListItem(

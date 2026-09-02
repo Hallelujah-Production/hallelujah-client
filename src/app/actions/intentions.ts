@@ -142,9 +142,17 @@ export async function createIntentionAction(
   const proofFile = proof instanceof File && proof.size > 0 ? proof : null;
   const mobile = String(formData.get("customerMobile") ?? "").trim();
 
+  // The form posts one hidden field holding every chosen type, comma separated;
+  // the first is the primary one the intention row stores.
+  const prayerTypeIds = String(formData.get("prayerTypeIds") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
   const result = await createIntention({
     churchId: destination.id,
-    prayerTypeId: String(formData.get("prayerTypeId") ?? ""),
+    prayerTypeId: prayerTypeIds[0] ?? String(formData.get("prayerTypeId") ?? ""),
+    prayerTypeIds,
     prayerFor: String(formData.get("prayerFor") ?? ""),
     requestedBy: String(formData.get("customerName") ?? ""),
     prayerDate: String(formData.get("prayerDate") ?? ""),

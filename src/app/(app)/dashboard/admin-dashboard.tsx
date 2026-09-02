@@ -20,7 +20,7 @@ import { AssignedChurchCard } from "@/components/layout/workspace-switcher";
 import { getDashboardStats, getIntentions, getPrayerSchedule } from "@/lib/services";
 import type { ChurchSession } from "@/lib/guards";
 import type { ChurchDashboardStats, IntentionView, Paginated } from "@/lib/types";
-import { formatCompactCurrency, formatCurrency, formatLongDate, formatTime, TODAY } from "@/lib/utils";
+import { formatCompactCurrency, formatCurrency, formatLongDate, formatTime, TODAY, prayerTypeNames} from "@/lib/utils";
 
 const QUICK_ACTIONS = [
   { label: "Create Intention", href: "/intentions/new", icon: Plus },
@@ -61,7 +61,7 @@ export async function AdminDashboard({
     {
       key: "type",
       header: "Prayer type",
-      cell: (row) => row.prayerType.name,
+      cell: (row) => prayerTypeNames(row),
     },
     {
       key: "for",
@@ -263,7 +263,7 @@ export async function AdminDashboard({
                     {row.prayerFor}
                   </Link>
                   <p className="text-xs text-muted-foreground">
-                    {row.prayerType.name} · {formatTime(row.preferredTime)}
+                    {prayerTypeNames(row)} · {formatTime(row.preferredTime)}
                   </p>
                 </div>
                 <StatusBadge status={row.status} />
@@ -351,7 +351,7 @@ export async function AdminDashboard({
                     {intention.reference}
                   </Link>
                   <span className="block text-xs text-muted-foreground">
-                    {intention.customer.name} · {intention.prayerType.name}
+                    {intention.customer.name} · {prayerTypeNames(intention)}
                   </span>
                 </span>
                 <span className="text-sm font-semibold tabular-nums text-foreground">

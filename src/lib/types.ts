@@ -292,9 +292,25 @@ export interface PaymentQuery extends ListQuery {
 /* View models returned by the service layer                            */
 /* ------------------------------------------------------------------ */
 
+/** One prayer type on an intention, with its share of the offering. */
+export interface IntentionPrayerType {
+  id: string;
+  code: string;
+  name: string;
+  /** This type's share of the single offering the family paid. */
+  amount: number;
+}
+
 export interface IntentionView extends Intention {
   customer: Customer;
+  /** The primary type — what list filters match on. */
   prayerType: PrayerType;
+  /**
+   * Every type this intention was offered for, primary first. Always has at
+   * least one entry, so a screen can render this and never special-case the
+   * single-type case.
+   */
+  prayerTypes: IntentionPrayerType[];
   payment: Payment;
   assignedStaff?: User;
   church: Church;

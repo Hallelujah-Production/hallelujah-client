@@ -7,7 +7,7 @@ import { getSession } from "@/lib/session";
 import { getStaffIntentionById } from "@/lib/services";
 import type { IntentionView } from "@/lib/types";
 import { PrayerElapsedTimer } from "@/components/domain/prayer-elapsed-timer";
-import { formatDateTime, formatLongDate, formatPrayerDuration, formatTime } from "@/lib/utils";
+import { formatDateTime, formatLongDate, formatPrayerDuration, formatTime, prayerTypeNames} from "@/lib/utils";
 import { StaffPrayerActions } from "./complete-button";
 
 export const metadata: Metadata = {
@@ -88,7 +88,7 @@ export default async function StaffPrayerTicketPage({
               Offer this prayer
             </p>
             <h1 className="mt-0.5 font-display text-lg font-semibold leading-snug tracking-tight">
-              {intention.prayerType.name}
+              {prayerTypeNames(intention)}
             </h1>
             <p className="mt-0.5 text-xs tabular-nums text-primary-foreground/70">
               {intention.reference}

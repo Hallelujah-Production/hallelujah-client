@@ -20,7 +20,7 @@ import {
   formatLongDate,
   formatPrayerDuration,
   formatTime,
-} from "@/lib/utils";
+  prayerTypeNames,} from "@/lib/utils";
 import { IntentionActions } from "./intention-actions";
 import { IntentionRowActions } from "../intention-row-actions";
 
@@ -61,7 +61,7 @@ export default async function IntentionDetailPage({
           { label: "Intentions", href: "/intentions" },
           { label: intention.reference },
         ]}
-        eyebrow={prayerType.name}
+        eyebrow={prayerTypeNames(intention)}
         title={intention.prayerFor}
         description={`Requested by ${intention.requestedBy} · ${formatLongDate(intention.prayerDate)}`}
         actions={
@@ -121,7 +121,7 @@ export default async function IntentionDetailPage({
                     Prayer intention
                   </p>
                   <h2 className="mt-1 font-display text-2xl font-semibold tracking-tight">
-                    {prayerType.name}
+                    {prayerTypeNames(intention)}
                   </h2>
                 </div>
               </div>

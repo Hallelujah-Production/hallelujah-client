@@ -60,7 +60,11 @@ function CounterIntentionFormInner({
   onCreateAnother: () => void;
 }) {
   const [state, formAction, pending] = useActionState(createIntentionAction, initialState);
-  const [prayerTypeId, setPrayerTypeId] = React.useState("");
+  /**
+   * Chosen prayer types, in the order they were tapped. Order matters: the
+   * first is the primary type the intention is filed under.
+   */
+  const [prayerTypeIds, setPrayerTypeIds] = React.useState<string[]>([]);
   const [personName, setPersonName] = React.useState("");
   const [prayerFor, setPrayerFor] = React.useState("");
   const [prayerDate, setPrayerDate] = React.useState(TODAY);
@@ -82,7 +86,12 @@ function CounterIntentionFormInner({
 
   const mustPickChurch = parishes.length > 1;
   const mustPickStaff = assignableStaff.length > 1;
-  const selectedType = prayerTypes.find((type) => type.id === prayerTypeId);
+  const selectedTypes = prayerTypeIds
+    .map((id) => prayerTypes.find((type) => type.id === id))
+    .filter((type): type is NonNullable<typeof type> => Boolean(type));
+  // What the parish would charge for everything chosen — shown as the Amount
+  // placeholder only. The figure recorded is whatever the operator types.
+  const suggestedTotal = selectedTypes.reduce((sum, type) => sum + (type.suggestedAmount || 0), 0);
   const listedTypes = prayerTypes.filter((type) => type.isActive);
 
   React.useEffect(() => {
@@ -108,7 +117,7 @@ function CounterIntentionFormInner({
   return (
     <form action={formAction} className="space-y-7" suppressHydrationWarning>
       <input type="hidden" name="churchId" value={mustPickChurch ? destinationChurchId : church.id} suppressHydrationWarning />
-      <input type="hidden" name="prayerTypeId" value={prayerTypeId} suppressHydrationWarning />
+      <input type="hidden" name="prayerTypeIds" value={prayerTypeIds.join(",")} suppressHydrationWarning />
       <input type="hidden" name="method" value="CASH" suppressHydrationWarning />
       {assignableStaff.length === 1 ? (
         <input type="hidden" name="assignedStaffUserId" value={assignableStaff[0].id} suppressHydrationWarning />
@@ -122,16 +131,29 @@ function CounterIntentionFormInner({
         </legend>
         <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {listedTypes.map((type, index) => {
-            const active = prayerTypeId === type.id;
+            const position = prayerTypeIds.indexOf(type.id);
+            const active = position !== -1;
             return (
               <button
                 key={type.id}
                 type="button"
                 suppressHydrationWarning
-                onClick={() => {
-                  setPrayerTypeId(type.id);
-                  setAmount(String(type.suggestedAmount || ""));
-                }}
+                aria-pressed={active}
+                // Toggles. A family arriving with a birthday and a thanksgiving
+                // pays once for both, so this is a set, not a choice of one.
+                // Tapping an active type removes it; the order is kept because
+                // the first one chosen is the primary type.
+                //
+                // The parish price stays in the Amount placeholder rather than
+                // filling the field: a pre-filled number is easy to submit
+                // unread when the family paid something else.
+                onClick={() =>
+                  setPrayerTypeIds((current) =>
+                    current.includes(type.id)
+                      ? current.filter((id) => id !== type.id)
+                      : [...current, type.id],
+                  )
+                }
                 className={cn(
                   "flex min-h-14 cursor-pointer items-center gap-3 rounded-md border px-3.5 py-3 text-left transition-colors",
                   active
@@ -140,16 +162,24 @@ function CounterIntentionFormInner({
                 )}
               >
                 <PrayerIcon icon={type.icon} index={index} size="sm" />
-                <span className="min-w-0">
+                <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold text-foreground">{prayerTypeLabel(type)}</span>
                 </span>
+                {active ? (
+                  <span
+                    aria-hidden="true"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground"
+                  >
+                    {position + 1}
+                  </span>
+                ) : null}
               </button>
             );
           })}
         </div>
-        {errors.prayerTypeId ? (
+        {errors.prayerTypeIds || errors.prayerTypeId ? (
           <p role="alert" className="mt-2 text-xs font-medium text-destructive">
-            ✕ {errors.prayerTypeId}
+            ✕ {errors.prayerTypeIds ?? errors.prayerTypeId}
           </p>
         ) : null}
       </fieldset>
@@ -219,7 +249,7 @@ function CounterIntentionFormInner({
               inputMode="numeric"
               value={amount}
               onChange={(event) => setAmount(event.target.value.replace(/[^0-9]/g, ""))}
-              placeholder={selectedType ? String(selectedType.suggestedAmount) : "500"}
+              placeholder={suggestedTotal ? String(suggestedTotal) : "500"}
               className="h-12 pl-7 text-base tabular-nums"
             />
           </div>
@@ -273,7 +303,7 @@ function CounterIntentionFormInner({
         className="h-14 w-full text-base"
         disabled={
           pending ||
-          !prayerTypeId ||
+          prayerTypeIds.length === 0 ||
           (mustPickChurch && !destinationChurchId) ||
           (mustPickStaff && !assignedStaffUserId)
         }
