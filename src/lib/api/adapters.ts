@@ -481,7 +481,12 @@ export function mapOfficialReceipt(
     customer,
     intention,
     prayerType: stubPrayerType({
-      name: str(snapPrayer.typeName),
+      // Every type the offering paid for. `typeNames` is what receipts issued
+      // since an intention could name several carry; older ones have only
+      // `typeName`, and a receipt is a record of its moment — never rewritten.
+      name: Array.isArray(snapPrayer.typeNames) && snapPrayer.typeNames.length
+        ? (snapPrayer.typeNames as string[]).join(", ")
+        : str(snapPrayer.typeName),
       code: str(snapPrayer.typeCode),
     }),
     payment,
