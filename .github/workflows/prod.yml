@@ -19,7 +19,7 @@ jobs:
             --exclude='node_modules/' \
             --exclude='.env' \
             --exclude='.env.*' \
-            ./hallelujah-client/ /mpower/hallelujah-client/
+            ./ /mpower/hallelujah-client/
 
       - name: Install dependencies
         working-directory: /mpower/hallelujah-client
@@ -34,5 +34,5 @@ jobs:
           pm2 restart frontend
           pm2 save
 
-      - name: Check frontend
+      - name: Verify frontend
         run: pm2 status frontend
