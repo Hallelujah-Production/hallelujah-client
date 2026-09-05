@@ -1,0 +1,43 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Frontend
+    runs-on: [self-hosted, prod-runner]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync frontend
+        run: |
+          rsync -av --delete \
+            --exclude='.git/' \
+            --exclude='node_modules/' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            ./hallelujah-client/ /mpower/hallelujah-client/
+
+      - name: Install dependencies
+        run: |
+          cd /mpower/hallelujah-client
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd /mpower/hallelujah-client
+          npm run build
+
+      - name: Restart frontend
+        run: |
+          pm2 restart frontend
+          pm2 save
+
+      - name: Verify frontend
+        run: |
+          pm2 status frontend
