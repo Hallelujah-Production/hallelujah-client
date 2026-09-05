@@ -2,12 +2,10 @@ name: Deploy Frontend
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
 
 jobs:
   deploy:
-    name: Deploy Frontend
     runs-on: [self-hosted, prod-runner]
 
     steps:
@@ -24,20 +22,17 @@ jobs:
             ./hallelujah-client/ /mpower/hallelujah-client/
 
       - name: Install dependencies
-        run: |
-          cd /mpower/hallelujah-client
-          npm ci
+        working-directory: /mpower/hallelujah-client
+        run: npm ci
 
       - name: Build frontend
-        run: |
-          cd /mpower/hallelujah-client
-          npm run build
+        working-directory: /mpower/hallelujah-client
+        run: npm run build
 
       - name: Restart frontend
         run: |
           pm2 restart frontend
           pm2 save
 
-      - name: Verify frontend
-        run: |
-          pm2 status frontend
+      - name: Check frontend
+        run: pm2 status frontend
