@@ -12,11 +12,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # .next is gitignored, so the checkout never contains one. Without this
+      # exclude, --delete removes the build cache from the deploy directory on
+      # every run and each build starts cold — that is where the
+      # "No build cache found" warning comes from.
       - name: Sync frontend
         run: |
           rsync -av --delete \
             --exclude='.git/' \
             --exclude='node_modules/' \
+            --exclude='.next/' \
             --exclude='.env' \
             --exclude='.env.*' \
             ./ /mpower/hallelujah-client/
