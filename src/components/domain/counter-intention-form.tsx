@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { CheckCircle2, Printer } from "lucide-react";
+import { CheckCircle2, Languages, Printer } from "lucide-react";
 import { createIntentionAction, type SubmitIntentionState } from "@/app/actions/intentions";
 import { Button } from "@/components/ui/button";
 import { Field, FormErrorSummary, FormRow, Input, Select } from "@/components/ui/form";
@@ -10,6 +10,11 @@ import { PrayerIcon } from "@/components/domain/prayer-icon";
 import { PreferredTimeField } from "@/components/domain/preferred-time-field";
 import type { Church, PrayerType, User } from "@/lib/types";
 import { addDays, cn, formatCurrency, TODAY } from "@/lib/utils";
+import {
+  DEFAULT_RECEIPT_LOCALE,
+  RECEIPT_LOCALES,
+  type ReceiptLocale,
+} from "@/lib/i18n/locales";
 
 function isOtherPrayerType(type?: PrayerType | null): boolean {
   if (!type) return false;
@@ -323,9 +328,19 @@ function CreatedIntention({
   churchName: string;
   onCreateAnother: () => void;
 }) {
+  // The family is standing at the counter, so the language is chosen here
+  // rather than on the receipt screen — one click from "Create" to paper.
+  const [locale, setLocale] = React.useState<ReceiptLocale>(DEFAULT_RECEIPT_LOCALE);
+
   const printReceipt = () => {
     if (!state.receiptId) return;
-    window.open(`/receipts/${state.receiptId}?print=1`, "_blank", "noopener,noreferrer");
+    const query = new URLSearchParams({ print: "1" });
+    if (locale !== DEFAULT_RECEIPT_LOCALE) query.set("lang", locale);
+    window.open(
+      `/receipts/${state.receiptId}?${query.toString()}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   return (
@@ -349,6 +364,29 @@ function CreatedIntention({
           <p className="font-semibold tabular-nums">{formatCurrency(state.amount)}</p>
         ) : null}
       </dl>
+      {state.receiptId ? (
+        <div className="mx-auto w-full max-w-xs text-left">
+          <label
+            htmlFor="print-language"
+            className="mb-1 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
+          >
+            <Languages className="h-3.5 w-3.5" aria-hidden="true" />
+            Print in
+          </label>
+          <Select
+            id="print-language"
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as ReceiptLocale)}
+          >
+            {RECEIPT_LOCALES.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.code === "en" ? option.label : `${option.nativeLabel} — ${option.label}`}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 pt-2 sm:flex-row">
         <Button
           type="button"

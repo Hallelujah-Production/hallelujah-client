@@ -7,9 +7,11 @@ import { Receipt } from "@/components/domain/receipt";
 import { PrintButton } from "@/components/domain/print-button";
 import { AutoPrint } from "@/components/domain/auto-print";
 import { ThermalPrintDocument } from "@/components/domain/thermal-print-document";
+import { ReceiptLanguageSelect } from "@/components/domain/receipt-language-select";
 import { assertChurchAdmin } from "@/lib/guards";
 import { getSession } from "@/lib/session";
 import { getReceipt } from "@/lib/services";
+import { resolveReceiptLocale } from "@/lib/i18n/locales";
 
 export const metadata: Metadata = {
   title: "Receipt",
@@ -28,6 +30,8 @@ export default async function ReceiptDetailPage({
   const [session, receipt] = await Promise.all([getSession(), getReceipt("", id)]);
   assertChurchAdmin(session);
   if (!receipt) notFound();
+
+  const locale = resolveReceiptLocale(query.lang);
 
   return (
     <div className="space-y-6 print:space-y-0">
@@ -73,8 +77,20 @@ export default async function ReceiptDetailPage({
         </p>
       ) : null}
 
+      <div
+        data-print="hide"
+        className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-border bg-card p-4 shadow-sm"
+      >
+        <ReceiptLanguageSelect value={locale} />
+        <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
+          The receipt below is exactly what the printer will produce. Pick the
+          family&rsquo;s language before printing — the amount, receipt number and
+          mobile number stay in figures in every language.
+        </p>
+      </div>
+
       <div className="print:mx-0 print:overflow-visible print:px-0 print:pb-0">
-        <Receipt receipt={receipt} />
+        <Receipt receipt={receipt} locale={locale} />
       </div>
 
       <p data-print="hide" className="text-center text-xs text-muted-foreground">

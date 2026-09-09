@@ -1,5 +1,14 @@
-import { PAYMENT_METHOD_LABEL, type ReceiptView } from "@/lib/types";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { type ReceiptView } from "@/lib/types";
+import { cn, formatCurrency } from "@/lib/utils";
+import { DEFAULT_RECEIPT_LOCALE, type ReceiptLocale } from "@/lib/i18n/locales";
+import { receiptFontClass } from "@/lib/i18n/receipt-fonts";
+import { receiptLabels } from "@/lib/i18n/receipt-labels";
+import {
+  localizeDate,
+  localizeName,
+  localizePrayerTypeName,
+  localizeText,
+} from "@/lib/i18n/receipt-text";
 
 /** Print-receipt crest only. Do not use on the app chrome or public site. */
 const RECEIPT_LOGO_SRC = "/brand/receipt-logo.jpeg";
@@ -7,36 +16,57 @@ const RECEIPT_LOGO_SRC = "/brand/receipt-logo.jpeg";
 /** Standard 80mm thermal / POS roll. Height follows content — never a fixed page. */
 export const THERMAL_WIDTH_MM = 80;
 
-const PAYMENT_STATUS_TEXT = {
-  PENDING_VERIFICATION: "PENDING",
-  VERIFIED: "VERIFIED",
-  REJECTED: "REJECTED",
-} as const;
-
 /**
  * Compact 80mm thermal receipt. Screen preview is the same width as the roll.
+ *
+ * `locale` prints the whole document in the family's language — many
+ * parishioners cannot read English. Two things deliberately do not move:
+ * the church's own name, which is its legal identity, and every figure
+ * (amount, receipt number, mobile, year), which the counter reconciles
+ * against the register by eye.
  */
 export function Receipt({
   receipt,
+  locale = DEFAULT_RECEIPT_LOCALE,
   className,
 }: {
   receipt: ReceiptView;
+  locale?: ReceiptLocale;
   className?: string;
 }) {
   const { church, customer, intention, prayerType, payment } = receipt;
-  const locality = [church.addressLine1, church.city].filter(Boolean).join(", ");
+  const t = receiptLabels(locale);
+  const latin = locale === "en";
+
+  const locality = localizeText(
+    [church.addressLine1, church.city].filter(Boolean).join(", "),
+    locale,
+  );
+  const customerName = localizeName(customer.name, locale);
+  const prayerTypeName = localizePrayerTypeName(prayerType, locale);
+
   const requestedBy = intention.requestedBy?.trim();
   const showRequestedBy =
     Boolean(requestedBy) &&
     requestedBy.toLowerCase() !== customer.name.trim().toLowerCase() &&
     requestedBy.toLowerCase() !== (receipt.receivedBy?.name ?? "").trim().toLowerCase();
 
+  const statusText = {
+    PENDING_VERIFICATION: t.statusPending,
+    VERIFIED: t.statusVerified,
+    REJECTED: t.statusRejected,
+  }[payment.status];
+
+  const methodText = payment.method === "CASH" ? t.methodCash : t.methodUpi;
+
   return (
     <article
       id="official-receipt"
       data-print="area"
+      lang={locale}
       className={cn(
         "mx-auto box-border w-[80mm] max-w-[80mm] bg-white px-[3mm] py-[3mm] text-[11px] leading-snug text-foreground shadow-sm print:shadow-none",
+        receiptFontClass(locale),
         className,
       )}
       aria-label={`Receipt ${receipt.reference}`}
@@ -59,58 +89,54 @@ export function Receipt({
       <Rule />
 
       <div className="text-center">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-foreground/70">
-          Official receipt
-        </p>
+        <Caption latin={latin} wide>
+          {t.officialReceipt}
+        </Caption>
         <p className="mt-0.5 font-display text-[13px] font-bold tabular-nums">{receipt.reference}</p>
-        <p className="mt-0.5 text-[10px] text-foreground/70">{formatDate(receipt.issuedAt)}</p>
+        <p className="mt-0.5 text-[10px] text-foreground/70">
+          {localizeDate(receipt.issuedAt, locale)}
+        </p>
       </div>
 
       <Rule />
 
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
-        Prayer intention
-      </p>
-      <p className="mt-0.5 font-semibold">{prayerType.name}</p>
+      <Caption latin={latin}>{t.prayerIntention}</Caption>
+      <p className="mt-0.5 font-semibold">{prayerTypeName}</p>
 
-      <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
-        Received from
-      </p>
-      <Row label="Name" value={customer.name} />
-      {customer.mobile ? <Row label="Mobile" value={customer.mobile} /> : null}
+      <Caption latin={latin} className="mt-2">
+        {t.receivedFrom}
+      </Caption>
+      <Row label={t.name} value={customerName} />
+      {customer.mobile ? <Row label={t.mobile} value={customer.mobile} /> : null}
 
-      <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
-        Prayer for
-      </p>
-      <p className="font-semibold">{intention.prayerFor}</p>
+      <Caption latin={latin} className="mt-2">
+        {t.prayerFor}
+      </Caption>
+      <p className="font-semibold">{localizeText(intention.prayerFor, locale)}</p>
 
-      <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
-        Prayer date
-      </p>
-      <p>{formatDate(intention.prayerDate)}</p>
+      <Caption latin={latin} className="mt-2">
+        {t.prayerDate}
+      </Caption>
+      <p>{localizeDate(intention.prayerDate, locale)}</p>
 
       {showRequestedBy ? (
         <>
-          <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
-            Requested by
-          </p>
-          <p>{requestedBy}</p>
+          <Caption latin={latin} className="mt-2">
+            {t.requestedBy}
+          </Caption>
+          <p>{localizeName(requestedBy ?? "", locale)}</p>
         </>
       ) : null}
 
       <Rule />
 
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
-        Payment
-      </p>
-      <Row label="Method" value={PAYMENT_METHOD_LABEL[payment.method]} />
-      <Row label="Description" value={prayerType.name} />
+      <Caption latin={latin}>{t.payment}</Caption>
+      <Row label={t.method} value={methodText} />
+      <Row label={t.description} value={prayerTypeName} />
 
       <Rule />
 
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-foreground/70">
-        Total received
-      </p>
+      <Caption latin={latin}>{t.totalReceived}</Caption>
       <p className="text-right font-display text-[18px] font-bold tabular-nums text-primary">
         {formatCurrency(payment.amount)}
       </p>
@@ -118,7 +144,7 @@ export function Receipt({
       <Rule />
 
       <p className="text-[10px]">
-        Status:{" "}
+        {t.status}:{" "}
         <span
           className={cn(
             "font-semibold",
@@ -127,22 +153,27 @@ export function Receipt({
             payment.status === "REJECTED" && "text-destructive",
           )}
         >
-          {PAYMENT_STATUS_TEXT[payment.status]}
+          {statusText}
         </span>
       </p>
       <p className="mt-1 text-[10px]">
-        Received By: {receipt.receivedBy?.name ?? "Parish office"}
+        {t.receivedBy}: {localizeName(receipt.receivedBy?.name ?? "", locale) || t.parishOffice}
       </p>
 
-      <p className="mt-3 text-center font-display text-[11px] font-semibold text-primary">
-        Thank you for your
-        <br />
-        prayer intention!
+      {/* The closing line is broken by hand in every language — left to wrap,
+          it splits at whatever point the width happens to fall on. */}
+      <p className="mt-3 whitespace-pre-line text-center font-display text-[11px] font-semibold text-primary">
+        {t.thanks}
       </p>
 
       <Rule />
 
-      <p className="text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground/70">
+      <p
+        className={cn(
+          "text-center text-[10px] font-semibold text-foreground/70",
+          latin && "uppercase tracking-[0.08em]",
+        )}
+      >
         {church.name}
       </p>
     </article>
@@ -151,6 +182,36 @@ export function Receipt({
 
 function Rule() {
   return <hr className="my-2 border-0 border-t border-foreground/70" />;
+}
+
+/**
+ * Section heading. Uppercasing and letter-spacing are Latin typography — an
+ * Indic script has no case, and spacing the letters out pulls conjuncts and
+ * vowel signs away from the consonant they belong to.
+ */
+function Caption({
+  children,
+  latin,
+  wide,
+  className,
+}: {
+  children: React.ReactNode;
+  latin: boolean;
+  /** The document title sits one notch wider than the section headings. */
+  wide?: boolean;
+  className?: string;
+}) {
+  return (
+    <p
+      className={cn(
+        "text-[9px] font-semibold text-foreground/70",
+        latin && (wide ? "uppercase tracking-[0.14em]" : "uppercase tracking-[0.12em]"),
+        className,
+      )}
+    >
+      {children}
+    </p>
+  );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
