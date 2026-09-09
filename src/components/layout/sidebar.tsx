@@ -136,11 +136,6 @@ export function Sidebar({
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-6">
         <NavSections sections={sections} badges={badges} />
       </div>
-      <div className="border-t border-border px-5 py-3">
-        <p className="text-[0.65rem] leading-relaxed text-muted-foreground">
-          Payments are recorded manually. No online payment gateway is used.
-        </p>
-      </div>
     </aside>
   );
 }
