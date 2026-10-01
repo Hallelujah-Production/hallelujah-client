@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { CheckCircle2, Languages, Printer } from "lucide-react";
 import { createIntentionAction, type SubmitIntentionState } from "@/app/actions/intentions";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Field, FormErrorSummary, FormRow, Input, Select } from "@/components/ui/form";
 import { PrayerIcon } from "@/components/domain/prayer-icon";
 import { PreferredTimeField } from "@/components/domain/preferred-time-field";
@@ -70,6 +71,10 @@ function CounterIntentionFormInner({
    * first is the primary type the intention is filed under.
    */
   const [prayerTypeIds, setPrayerTypeIds] = React.useState<string[]>([]);
+  const [otherIntentionName, setOtherIntentionName] = React.useState("");
+  const [otherDraft, setOtherDraft] = React.useState("");
+  const [otherDialogOpen, setOtherDialogOpen] = React.useState(false);
+  const [otherDialogError, setOtherDialogError] = React.useState("");
   const [personName, setPersonName] = React.useState("");
   const [prayerFor, setPrayerFor] = React.useState("");
   const [prayerDate, setPrayerDate] = React.useState(TODAY);
@@ -98,6 +103,49 @@ function CounterIntentionFormInner({
   // placeholder only. The figure recorded is whatever the operator types.
   const suggestedTotal = selectedTypes.reduce((sum, type) => sum + (type.suggestedAmount || 0), 0);
   const listedTypes = prayerTypes.filter((type) => type.isActive);
+  const otherSelected = selectedTypes.some((type) => isOtherPrayerType(type));
+  const otherNeedsName = otherSelected && !otherIntentionName.trim();
+
+  const closeOtherDialog = () => {
+    setOtherDialogOpen(false);
+    setOtherDialogError("");
+    setOtherDraft("");
+  };
+
+  const confirmOtherIntention = () => {
+    const name = otherDraft.trim();
+    if (!name) {
+      setOtherDialogError("Enter the name of this intention.");
+      return;
+    }
+    const otherType = listedTypes.find((type) => isOtherPrayerType(type));
+    if (!otherType) {
+      closeOtherDialog();
+      return;
+    }
+    setOtherIntentionName(name);
+    setPrayerTypeIds((current) =>
+      current.includes(otherType.id) ? current : [...current, otherType.id],
+    );
+    closeOtherDialog();
+  };
+
+  const togglePrayerType = (type: PrayerType) => {
+    if (isOtherPrayerType(type)) {
+      if (prayerTypeIds.includes(type.id)) {
+        setPrayerTypeIds((current) => current.filter((id) => id !== type.id));
+        setOtherIntentionName("");
+        return;
+      }
+      setOtherDraft(otherIntentionName);
+      setOtherDialogError("");
+      setOtherDialogOpen(true);
+      return;
+    }
+    setPrayerTypeIds((current) =>
+      current.includes(type.id) ? current.filter((id) => id !== type.id) : [...current, type.id],
+    );
+  };
 
   React.useEffect(() => {
     if (!mustPickChurch) setDestinationChurchId(church.id);
@@ -110,9 +158,16 @@ function CounterIntentionFormInner({
   const errors = state.status === "error" ? state.errors ?? {} : {};
 
   if (state.status === "success" && state.reference) {
+    const primaryIsOther = isOtherPrayerType(selectedTypes[0]);
     return (
       <CreatedIntention
-        state={state}
+        state={{
+          ...state,
+          prayerTypeName:
+            primaryIsOther && otherIntentionName.trim()
+              ? `Other — ${otherIntentionName.trim()}`
+              : state.prayerTypeName,
+        }}
         churchName={state.churchName ?? church.name}
         onCreateAnother={onCreateAnother}
       />
@@ -120,9 +175,11 @@ function CounterIntentionFormInner({
   }
 
   return (
+    <>
     <form action={formAction} className="space-y-7" suppressHydrationWarning>
       <input type="hidden" name="churchId" value={mustPickChurch ? destinationChurchId : church.id} suppressHydrationWarning />
       <input type="hidden" name="prayerTypeIds" value={prayerTypeIds.join(",")} suppressHydrationWarning />
+      <input type="hidden" name="message" value={otherIntentionName} suppressHydrationWarning />
       <input type="hidden" name="method" value="CASH" suppressHydrationWarning />
       {assignableStaff.length === 1 ? (
         <input type="hidden" name="assignedStaffUserId" value={assignableStaff[0].id} suppressHydrationWarning />
@@ -138,6 +195,10 @@ function CounterIntentionFormInner({
           {listedTypes.map((type, index) => {
             const position = prayerTypeIds.indexOf(type.id);
             const active = position !== -1;
+            const otherLabel =
+              active && isOtherPrayerType(type) && otherIntentionName.trim()
+                ? otherIntentionName.trim()
+                : null;
             return (
               <button
                 key={type.id}
@@ -149,16 +210,13 @@ function CounterIntentionFormInner({
                 // Tapping an active type removes it; the order is kept because
                 // the first one chosen is the primary type.
                 //
+                // Other opens a dialog first — the catalogue name alone is not
+                // enough for the priest, so the operator must name it.
+                //
                 // The parish price stays in the Amount placeholder rather than
                 // filling the field: a pre-filled number is easy to submit
                 // unread when the family paid something else.
-                onClick={() =>
-                  setPrayerTypeIds((current) =>
-                    current.includes(type.id)
-                      ? current.filter((id) => id !== type.id)
-                      : [...current, type.id],
-                  )
-                }
+                onClick={() => togglePrayerType(type)}
                 className={cn(
                   "flex min-h-14 cursor-pointer items-center gap-3 rounded-md border px-3.5 py-3 text-left transition-colors",
                   active
@@ -169,6 +227,9 @@ function CounterIntentionFormInner({
                 <PrayerIcon icon={type.icon} index={index} size="sm" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold text-foreground">{prayerTypeLabel(type)}</span>
+                  {otherLabel ? (
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">{otherLabel}</span>
+                  ) : null}
                 </span>
                 {active ? (
                   <span
@@ -182,9 +243,14 @@ function CounterIntentionFormInner({
             );
           })}
         </div>
-        {errors.prayerTypeIds || errors.prayerTypeId ? (
+        {errors.prayerTypeIds || errors.prayerTypeId || errors.message ? (
           <p role="alert" className="mt-2 text-xs font-medium text-destructive">
-            ✕ {errors.prayerTypeIds ?? errors.prayerTypeId}
+            ✕ {errors.prayerTypeIds ?? errors.prayerTypeId ?? errors.message}
+          </p>
+        ) : null}
+        {otherNeedsName ? (
+          <p role="alert" className="mt-2 text-xs font-medium text-destructive">
+            ✕ Name this Other intention before creating.
           </p>
         ) : null}
       </fieldset>
@@ -309,6 +375,7 @@ function CounterIntentionFormInner({
         disabled={
           pending ||
           prayerTypeIds.length === 0 ||
+          otherNeedsName ||
           (mustPickChurch && !destinationChurchId) ||
           (mustPickStaff && !assignedStaffUserId)
         }
@@ -316,6 +383,48 @@ function CounterIntentionFormInner({
         {pending ? "Creating…" : "Create Intention"}
       </Button>
     </form>
+
+    <Dialog
+      open={otherDialogOpen}
+      onClose={closeOtherDialog}
+      title="Name this intention"
+      description="Other is not in the list. Enter what the priest should offer so the intention is clear."
+      size="sm"
+      footer={
+        <>
+          <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={closeOtherDialog}>
+            Cancel
+          </Button>
+          <Button type="button" size="sm" className="w-full sm:w-auto" onClick={confirmOtherIntention}>
+            Save
+          </Button>
+        </>
+      }
+    >
+      <Field id="otherIntentionName" label="Intention name" required error={otherDialogError || undefined}>
+        {(aria) => (
+          <Input
+            {...aria}
+            autoFocus
+            value={otherDraft}
+            onChange={(event) => {
+              setOtherDraft(event.target.value);
+              if (otherDialogError) setOtherDialogError("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                confirmOtherIntention();
+              }
+            }}
+            placeholder="House blessing, new job, visa interview…"
+            maxLength={500}
+            className="h-12 text-base"
+          />
+        )}
+      </Field>
+    </Dialog>
+    </>
   );
 }
 
